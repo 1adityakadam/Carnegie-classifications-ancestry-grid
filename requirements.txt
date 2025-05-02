@@ -13,3 +13,4 @@ pyarrow>=1.0.0
 fastparquet>=0.2.1
 Flask-Caching==2.3.1
 orjson>=3.10,<4
+psutil>=5.9.0
