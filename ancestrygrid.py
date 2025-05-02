@@ -1,11 +1,12 @@
 from flask import jsonify
-from flask_caching import Cache
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
+from flask_caching import Cache
 
-# Load your data
+# Load your data (replace with your actual filename)
+# new_data = pd.read_csv('new_data.csv')
 new_data = pd.read_parquet('new_data.parquet')
 
 # Define the desired order
@@ -20,10 +21,24 @@ desired_order = [
     'Not in'
 ]
 
-# Initialize Dash app and cache
+def get_unique_labels_for_year_glabel(year, glabel, data_frame):
+    filtered_df = data_frame[(data_frame['YEAR'] == year) & (data_frame['GLabel'] == glabel)]
+    unique_labels = filtered_df.sort_values(by='NewLabel')['Label'].unique().tolist()
+    return unique_labels
+
+# # Prepare data
+# new_df_with_unique_labels = new_data.drop_duplicates(subset=['YEAR', 'GLabel', 'Label'])
+# sorted_df = new_df_with_unique_labels.sort_values(by='SubCatLbl')
+# sorted_df['GLabel'] = pd.Categorical(sorted_df['GLabel'], categories=desired_order, ordered=True)
+# sorted_df = sorted_df.sort_values('GLabel')
+# all_glabels_sorted = sorted_df['GLabel'].unique()
+# year_glabel_mapping = new_df_with_unique_labels.groupby('YEAR')['GLabel'].unique().to_dict()
+
+# Initialize Dash app and expose server
 app = dash.Dash(__name__)
 server = app.server
 
+#cache--------------------------------------------------------------------------------------------------
 # Configure server-side caching
 cache = Cache(app.server, config={
     'CACHE_TYPE': 'filesystem',
@@ -31,23 +46,21 @@ cache = Cache(app.server, config={
     'CACHE_THRESHOLD': 100
 })
 
-def get_unique_labels_for_year_glabel(year, glabel, data_frame):
-    filtered_df = data_frame[(data_frame['YEAR'] == year) & (data_frame['GLabel'] == glabel)]
-    unique_labels = filtered_df.sort_values(by='NewLabel')['Label'].unique().tolist()
-    return unique_labels
-
+#cache--------------------------------------------------------------------------------------------------
+# Cache the preprocessing step and assign globally
 @cache.memoize(timeout=3600)
-def prepare_static_data():
+def prepare_data():
     new_df_with_unique_labels = new_data.drop_duplicates(subset=['YEAR', 'GLabel', 'Label'])
     sorted_df = new_df_with_unique_labels.sort_values(by='SubCatLbl')
     sorted_df['GLabel'] = pd.Categorical(sorted_df['GLabel'], categories=desired_order, ordered=True)
     sorted_df = sorted_df.sort_values('GLabel')
     all_glabels_sorted = sorted_df['GLabel'].unique()
     year_glabel_mapping = new_df_with_unique_labels.groupby('YEAR')['GLabel'].unique().to_dict()
-    return all_glabels_sorted, year_glabel_mapping
+    return new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping
 
-# Pre-cache static data
-all_glabels_sorted, year_glabel_mapping = prepare_static_data()
+#cache--------------------------------------------------------------------------------------------------
+# Assign the cached (or computed) values to global variables
+new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping = prepare_data()
 
 app.layout = html.Div([
     dcc.Dropdown(
@@ -63,6 +76,7 @@ app.layout = html.Div([
 def get_data():
     return jsonify(new_data.to_dict(orient="records"))
 
+#cache--------------------------------------------------------------------------------------------------
 @cache.memoize(timeout=300)
 def get_filtered_data(selected_most_recent_name):
     return new_data[new_data['MostRecentName'] == selected_most_recent_name]
@@ -73,30 +87,26 @@ def get_filtered_data(selected_most_recent_name):
     [Input('most-recent-name-dropdown', 'value')]
 )
 def update_table(selected_most_recent_name):
-    if not selected_most_recent_name:
-        return [], []
-    
-    filtered_data = get_filtered_data(selected_most_recent_name)
     years = sorted(new_data['YEAR'].unique())
-    instnm_by_year = filtered_data.groupby('YEAR')['Instnm'].first().to_dict()
+    instnm_by_year = new_data[new_data['MostRecentName'] == selected_most_recent_name].groupby('YEAR')['Instnm'].first().to_dict()
+
+    filtered_data = new_data[new_data['MostRecentName'] == selected_most_recent_name]
     link_unit_exists = 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all()
 
-    # Table header setup
     table_header_cells = [html.Th("Year")] + [html.Th(year) for year in years]
     if link_unit_exists:
         table_header_cells.append(html.Th("LinkUnit"))
     table_header = html.Tr(table_header_cells)
 
-    # Institution name row
     instnm_row_cells = [html.Th("Instnm")] + [html.Th(instnm_by_year.get(year, 'N/A')) for year in years]
     if link_unit_exists:
         link_unit_value = filtered_data['LinkUnit'].iloc[0]
         instnm_row_cells.append(html.Th(link_unit_value))
     instnm_row = html.Tr(instnm_row_cells)
 
-    # Link unit display
     link_unit_display = []
     if selected_most_recent_name:
+        filtered_data = new_data[new_data['MostRecentName'] == selected_most_recent_name]
         if 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all():
             link_unit_value = filtered_data['LinkUnit'].dropna().unique()[0]
             associated_data = new_data[new_data['UNITID'] == link_unit_value]
@@ -116,9 +126,8 @@ def update_table(selected_most_recent_name):
                     )
                     link_unit_display.append(html.Span(", ", style={'font-weight': 'normal'}))
     if link_unit_display:
-        link_unit_display = link_unit_display[:-1]
+        link_unit_display = link_unit_display[:-1]  # Remove last comma
 
-    # Table content generation
     table_rows = []
     max_rows = max(len(year_glabel_mapping.get(year, [])) for year in years)
     columns_content = {year: [] for year in years}
@@ -130,8 +139,9 @@ def update_table(selected_most_recent_name):
                 cell_content = [
                     html.P(
                         label,
-                        style={'background-color': 'yellow'} if label in filtered_data[
-                            (filtered_data['YEAR'] == year)
+                        style={'background-color': 'yellow'} if label in new_data[
+                            (new_data['MostRecentName'] == selected_most_recent_name) &
+                            (new_data['YEAR'] == year)
                         ]['Label'].values else {}
                     )
                     for label in labels
@@ -147,7 +157,6 @@ def update_table(selected_most_recent_name):
             else:
                 columns_content[year].append('')
 
-    # Create table rows
     for i in range(max_rows):
         row = [
             html.Td(
