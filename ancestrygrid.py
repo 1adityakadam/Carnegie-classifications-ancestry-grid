@@ -88,12 +88,13 @@ def get_filtered_data(selected_most_recent_name):
 )
 def update_table(selected_most_recent_name):
     years = sorted(new_data['YEAR'].unique())
-    instnm_by_year = new_data[new_data['MostRecentName'] == selected_most_recent_name].groupby('YEAR')['Instnm'].first().to_dict()
+    instnm_by_year = get_filtered_data(selected_most_recent_name).groupby('YEAR')['Instnm'].first().to_dict()
 
-    filtered_data = new_data[new_data['MostRecentName'] == selected_most_recent_name]
+    filtered_data = get_filtered_data(selected_most_recent_name)
     link_unit_exists = 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all()
 
-    table_header_cells = [html.Th("Year")] + [html.Th(year) for year in years]
+    # table_header_cells = [html.Th("Year")] + [html.Th(year) for year in years]
+    table_header_cells = [html.Th("GLabel")] + [html.Th(year) for year in years]
     if link_unit_exists:
         table_header_cells.append(html.Th("LinkUnit"))
     table_header = html.Tr(table_header_cells)
@@ -106,7 +107,7 @@ def update_table(selected_most_recent_name):
 
     link_unit_display = []
     if selected_most_recent_name:
-        filtered_data = new_data[new_data['MostRecentName'] == selected_most_recent_name]
+        filtered_data = get_filtered_data(selected_most_recent_name)
         if 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all():
             link_unit_value = filtered_data['LinkUnit'].dropna().unique()[0]
             associated_data = new_data[new_data['UNITID'] == link_unit_value]
@@ -164,7 +165,7 @@ def update_table(selected_most_recent_name):
                 style={'vertical-align': 'top', 'border-bottom': '2px solid #ddd'}
             ) for year in years
         ]
-        row.insert(0, html.Td('           '))
+        row.insert(0, html.Td(glabel, style={'font-weight':'bold'}))
         table_rows.append(html.Tr(row))
 
     return [table_header, instnm_row] + table_rows, html.Div(link_unit_display)
