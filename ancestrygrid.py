@@ -64,28 +64,14 @@ def load_data():
 # Assign the cached (or computed) values to global variables
 new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping = prepare_data()
 
-# --- MODIFIED LAYOUT: Two rows, first row with two columns ---
 app.layout = html.Div([
-    # First Row
-    html.Div([
-        # Left column
-        html.Div([
-            dcc.Dropdown(
-                id='most-recent-name-dropdown',
-                options=[{'label': name, 'value': name} for name in new_data['MostRecentName'].unique()],
-                placeholder="Select a MostRecentName"
-            ),
-            html.Div(id='link-unit-display'),
-        ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
-        # Right column
-        html.Div([
-            html.Table(id='year-glabel-table')
-        ], style={'width': '68%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-    ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'row', 'marginBottom': '30px'}),
-    # Second Row (optional, add your content here)
-    html.Div([
-        # Example: html.H2("Additional Content Goes Here")
-    ], style={'width': '100%'})
+    dcc.Dropdown(
+        id='most-recent-name-dropdown',
+        options=[{'label': name, 'value': name} for name in new_data['MostRecentName'].unique()],
+        placeholder="Select a MostRecentName"
+    ),
+    html.Div(id='link-unit-display'),
+    html.Table(id='year-glabel-table')
 ])
 
 @app.server.route('/get_data')
