@@ -1,79 +1,84 @@
+import os
+import pandas as pd
+import orjson
+import psutil
+
 from flask import Response
+from flask_caching import Cache
+
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
-import pandas as pd
-from flask_caching import Cache
-import orjson
 
-# Load your data
-new_data = pd.read_parquet('new_data.parquet', engine='pyarrow')
+# --- Configuration ---
+DATA_FILE = 'new_data.parquet'
+PREPROCESSED_FILE = 'preprocessed_data.parquet'
+CACHE_TIMEOUT = 3600
 
-# Convert appropriate columns to categorical
-categorical_cols = ['GLabel', 'Label', 'SubCatLbl']
-new_data[categorical_cols] = new_data[categorical_cols].astype('category')
+# --- Data Preprocessing ---
+def preprocess_data():
+    if not os.path.exists(PREPROCESSED_FILE):
+        print("Preprocessing data...")
+        df = pd.read_parquet(DATA_FILE, engine='pyarrow')
+        categorical_cols = ['GLabel', 'Label', 'SubCatLbl']
+        df[categorical_cols] = df[categorical_cols].astype('category')
+        desired_order = [
+            'Doctoral', "Master's", "Bachelor's", 'Associates',
+            'SF: 2Yr', 'SF: 4Yr', 'Tribal/Oth', 'Not in'
+        ]
+        df['GLabel'] = pd.Categorical(df['GLabel'], categories=desired_order, ordered=True)
+        new_df = df.drop_duplicates(subset=['YEAR', 'GLabel', 'Label'])
+        new_df = new_df.sort_values(by=['GLabel', 'SubCatLbl'])
+        new_df.to_parquet(PREPROCESSED_FILE, engine='pyarrow')
+        print("Preprocessing complete.")
 
-# Define the desired order
-desired_order = [
-    'Doctoral',
-    "Master's",
-    "Bachelor's",
-    'Associates',
-    'SF: 2Yr',
-    'SF: 4Yr',
-    'Tribal/Oth',
-    'Not in'
-]
+preprocess_data()
 
-def get_unique_labels_for_year_glabel(year, glabel, data_frame):
-    filtered_df = data_frame[(data_frame['YEAR'] == year) & (data_frame['GLabel'] == glabel)]
-    unique_labels = filtered_df.sort_values(by='NewLabel')['Label'].unique().tolist()
-    return unique_labels
+# --- Load Data ---
+def load_data():
+    df = pd.read_parquet(PREPROCESSED_FILE, engine='pyarrow')
+    return df
 
-# Initialize Dash app and expose server
+new_data = load_data()
+
+# --- Helper Functions ---
+def get_unique_labels_for_year_glabel(year, glabel, df):
+    filtered = df[(df['YEAR'] == year) & (df['GLabel'] == glabel)]
+    return filtered.sort_values('Label')['Label'].unique().tolist()
+
+# --- Dash App Setup ---
 app = dash.Dash(__name__)
 server = app.server
 
-# Configure server-side caching
 cache = Cache(app.server, config={
-    'CACHE_TYPE': 'filesystem',
-    'CACHE_DIR': 'cache-directory',
+    'CACHE_TYPE': 'simple',
     'CACHE_THRESHOLD': 100
 })
 
-# Cache the preprocessing step and assign globally
-@cache.memoize(timeout=3600)
-def prepare_data():
-    new_df_with_unique_labels = new_data.drop_duplicates(subset=['YEAR', 'GLabel', 'Label'])
-    sorted_df = new_df_with_unique_labels.sort_values(by='SubCatLbl')
-    sorted_df['GLabel'] = pd.Categorical(sorted_df['GLabel'], categories=desired_order, ordered=True)
-    sorted_df = sorted_df.sort_values('GLabel')
-    sorted_df.to_parquet('preprocessed_data.parquet', engine='pyarrow')
-    all_glabels_sorted = sorted_df['GLabel'].unique()
-    year_glabel_mapping = new_df_with_unique_labels.groupby('YEAR')['GLabel'].unique().to_dict()
-    return new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping
+desired_order = [
+    'Doctoral', "Master's", "Bachelor's", 'Associates',
+    'SF: 2Yr', 'SF: 4Yr', 'Tribal/Oth', 'Not in'
+]
+all_glabels_sorted = [g for g in desired_order if g in new_data['GLabel'].unique()]
+years_sorted = sorted(new_data['YEAR'].unique())
+most_recent_names = new_data['MostRecentName'].unique()
 
-@cache.memoize(timeout=3600)
-def load_data():
-    df = pd.read_parquet('preprocessed_data.parquet', engine='pyarrow')
-    df['GLabel'] = pd.Categorical(df['GLabel'], categories=desired_order, ordered=True)
-    year_glabel_mapping = df.groupby('YEAR')['GLabel'].unique().to_dict()
-    all_glabels = df['GLabel'].unique()
-    return df, all_glabels, year_glabel_mapping
-
-# Assign the cached (or computed) values to global variables
-new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping = prepare_data()
-
+# --- Layout ---
 app.layout = html.Div([
+    html.H3("Institution Data Dashboard"),
     dcc.Dropdown(
         id='most-recent-name-dropdown',
-        options=[{'label': name, 'value': name} for name in new_data['MostRecentName'].unique()],
+        options=[{'label': name, 'value': name} for name in most_recent_names],
         placeholder="Select a MostRecentName"
     ),
     html.Div(id='link-unit-display'),
-    html.Table(id='year-glabel-table')
+    html.Table(id='year-glabel-table'),
+    html.Hr(),
+    html.Div(id='perf-metrics', style={'fontSize': '12px', 'color': 'gray'}),
+    dcc.Interval(id='interval-component', interval=10*1000, n_intervals=0)
 ])
 
+# --- API Endpoint ---
 @app.server.route('/get_data')
 def get_data():
     return Response(
@@ -81,97 +86,80 @@ def get_data():
         mimetype='application/json'
     )
 
-app.config.suppress_callback_exceptions = True
+# --- Caching ---
+@cache.memoize(timeout=CACHE_TIMEOUT)
+def get_filtered_data(selected_name):
+    return new_data[new_data['MostRecentName'] == selected_name]
 
-@cache.memoize(timeout=300)
-def get_filtered_data(selected_most_recent_name):
-    return new_data[new_data['MostRecentName'] == selected_most_recent_name]
-
+# --- Callbacks ---
 @app.callback(
     [Output('year-glabel-table', 'children'),
      Output('link-unit-display', 'children')],
     [Input('most-recent-name-dropdown', 'value')],
     prevent_initial_call=True
 )
-def update_table(selected_most_recent_name):
-    years = sorted(new_data['YEAR'].unique())
-    instnm_by_year = get_filtered_data(selected_most_recent_name).groupby('YEAR')['Instnm'].first().to_dict()
+def update_table(selected_name):
+    if not selected_name:
+        return [], ""
+    filtered = get_filtered_data(selected_name)
+    instnm_by_year = filtered.groupby('YEAR')['Instnm'].first().to_dict()
 
-    filtered_data = get_filtered_data(selected_most_recent_name)
-    link_unit_exists = 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all()
-
-    table_header_cells = [html.Th("GLabel")] + [html.Th(year) for year in years]
+    link_unit_exists = 'LinkUnit' in filtered.columns and not filtered['LinkUnit'].isnull().all()
+    table_header_cells = [html.Th("GLabel")] + [html.Th(year) for year in years_sorted]
     if link_unit_exists:
         table_header_cells.append(html.Th("LinkUnit"))
     table_header = html.Tr(table_header_cells)
 
-    instnm_row_cells = [html.Th("Instnm")] + [html.Th(instnm_by_year.get(year, 'N/A')) for year in years]
+    instnm_row_cells = [html.Th("Instnm")] + [html.Th(instnm_by_year.get(year, 'N/A')) for year in years_sorted]
     if link_unit_exists:
-        link_unit_value = filtered_data['LinkUnit'].iloc[0]
+        link_unit_value = filtered['LinkUnit'].iloc[0]
         instnm_row_cells.append(html.Th(link_unit_value))
     instnm_row = html.Tr(instnm_row_cells)
 
+    # LinkUnit display
     link_unit_display = []
-    if selected_most_recent_name:
-        filtered_data = get_filtered_data(selected_most_recent_name)
-        if 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all():
-            link_unit_value = filtered_data['LinkUnit'].dropna().unique()[0]
-            associated_data = new_data[new_data['UNITID'] == link_unit_value]
-            associated_names = associated_data['MostRecentName'].unique().tolist()
-
-            link_unit_display.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
-            link_unit_display.append(html.Span(f"{link_unit_value}", style={'background-color': 'yellow', 'font-weight': 'bold'}))
-            if associated_names:
-                link_unit_display.append(html.Span(", Associated Names: ", style={'font-weight': 'bold'}))
-                for i, name in enumerate(associated_names):
-                    link_unit_display.append(
-                        html.A(
-                            f"{name}", href="#", id={'type': 'merge-link', 'index': i},
-                            **{'data-value': name},
-                            style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
-                        )
+    if link_unit_exists:
+        link_unit_value = filtered['LinkUnit'].dropna().unique()[0]
+        associated_data = new_data[new_data['UNITID'] == link_unit_value]
+        associated_names = associated_data['MostRecentName'].unique().tolist()
+        link_unit_display.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
+        link_unit_display.append(html.Span(f"{link_unit_value}", style={'background-color': 'yellow', 'font-weight': 'bold'}))
+        if associated_names:
+            link_unit_display.append(html.Span(", Associated Names: ", style={'font-weight': 'bold'}))
+            for i, name in enumerate(associated_names):
+                link_unit_display.append(
+                    html.A(
+                        f"{name}", href="#", id={'type': 'merge-link', 'index': i},
+                        **{'data-value': name},
+                        style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
                     )
-                    link_unit_display.append(html.Span(", ", style={'font-weight': 'normal'}))
-    if link_unit_display:
-        link_unit_display = link_unit_display[:-1]
+                )
+                link_unit_display.append(html.Span(", ", style={'font-weight': 'normal'}))
+        if link_unit_display:
+            link_unit_display = link_unit_display[:-1]  # Remove trailing comma
 
+    # Table rows
+    year_glabel_mapping = new_data.groupby('YEAR')['GLabel'].unique().to_dict()
+    max_rows = max(len(year_glabel_mapping.get(year, [])) for year in years_sorted)
     table_rows = []
-    max_rows = max(len(year_glabel_mapping.get(year, [])) for year in years)
-    columns_content = {year: [] for year in years}
 
     for glabel in all_glabels_sorted:
-        for year in years:
+        row = [html.Td(glabel, style={'font-weight':'bold'})]
+        for year in years_sorted:
             if glabel in year_glabel_mapping.get(year, []):
-                labels = get_unique_labels_for_year_glabel(year, glabel, new_df_with_unique_labels)
+                labels = get_unique_labels_for_year_glabel(year, glabel, new_data)
                 cell_content = [
                     html.P(
                         label,
-                        style={'background-color': 'yellow'} if label in new_data[
-                            (new_data['MostRecentName'] == selected_most_recent_name) &
-                            (new_data['YEAR'] == year)
-                        ]['Label'].values else {}
+                        style={'background-color': 'yellow'} if label in filtered[filtered['YEAR'] == year]['Label'].values else {}
                     )
                     for label in labels
                 ]
-                summary_style = {'background-color': '#FFD700', 'border-bottom': '1px solid black'} \
-                    if any(label.style and label.style.get('background-color') == 'yellow' for label in cell_content) else {}
-                columns_content[year].append(
-                    html.Details(
-                        [html.Summary(glabel, style=summary_style), html.Div(cell_content)],
-                        open=any(label.style and label.style.get('background-color') == 'yellow' for label in cell_content)
-                    )
-                )
+                row.append(html.Td(cell_content, style={'vertical-align': 'top', 'border-bottom': '2px solid #ddd'}))
             else:
-                columns_content[year].append('')
-
-    for i in range(max_rows):
-        row = [
-            html.Td(
-                columns_content[year][i] if i < len(columns_content[year]) else '',
-                style={'vertical-align': 'top', 'border-bottom': '2px solid #ddd'}
-            ) for year in years
-        ]
-        row.insert(0, html.Td(glabel, style={'font-weight':'bold'}))
+                row.append(html.Td(''))
+        if link_unit_exists:
+            row.append(html.Td(filtered['LinkUnit'].iloc[0]))
         table_rows.append(html.Tr(row))
 
     return [table_header, instnm_row] + table_rows, html.Div(link_unit_display)
@@ -182,10 +170,19 @@ def update_table(selected_most_recent_name):
     [State({'type': 'merge-link', 'index': ALL}, 'data-value')]
 )
 def update_dropdown_on_click(n_clicks_list, data_values):
-    if n_clicks_list is not None and any(n_clicks_list):
+    if n_clicks_list and any(n_clicks_list):
         clicked_index = n_clicks_list.index(max(n_clicks_list))
         return data_values[clicked_index]
     return dash.no_update
 
+@app.callback(
+    Output('perf-metrics', 'children'),
+    Input('interval-component', 'n_intervals')
+)
+def update_metrics(n):
+    mem = psutil.virtual_memory()
+    return f"Memory usage: {mem.percent}% | Available: {mem.available/1e9:.1f} GB"
+
+# --- Run ---
 if __name__ == '__main__':
-    app.run_server()
+    app.run_server(host="0.0.0.0", port=8050)
