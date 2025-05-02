@@ -1,13 +1,17 @@
-from flask import jsonify
+from flask import Response
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 from flask_caching import Cache
+import orjson
 
-# Load your data (replace with your actual filename)
-# new_data = pd.read_csv('new_data.csv')
-new_data = pd.read_parquet('new_data.parquet')
+# Load your data
+new_data = pd.read_parquet('new_data.parquet', engine='pyarrow')
+
+# Convert appropriate columns to categorical
+categorical_cols = ['GLabel', 'Label', 'SubCatLbl']
+new_data[categorical_cols] = new_data[categorical_cols].astype('category')
 
 # Define the desired order
 desired_order = [
@@ -26,19 +30,10 @@ def get_unique_labels_for_year_glabel(year, glabel, data_frame):
     unique_labels = filtered_df.sort_values(by='NewLabel')['Label'].unique().tolist()
     return unique_labels
 
-# # Prepare data
-# new_df_with_unique_labels = new_data.drop_duplicates(subset=['YEAR', 'GLabel', 'Label'])
-# sorted_df = new_df_with_unique_labels.sort_values(by='SubCatLbl')
-# sorted_df['GLabel'] = pd.Categorical(sorted_df['GLabel'], categories=desired_order, ordered=True)
-# sorted_df = sorted_df.sort_values('GLabel')
-# all_glabels_sorted = sorted_df['GLabel'].unique()
-# year_glabel_mapping = new_df_with_unique_labels.groupby('YEAR')['GLabel'].unique().to_dict()
-
 # Initialize Dash app and expose server
 app = dash.Dash(__name__)
 server = app.server
 
-#cache--------------------------------------------------------------------------------------------------
 # Configure server-side caching
 cache = Cache(app.server, config={
     'CACHE_TYPE': 'filesystem',
@@ -46,7 +41,6 @@ cache = Cache(app.server, config={
     'CACHE_THRESHOLD': 100
 })
 
-#cache--------------------------------------------------------------------------------------------------
 # Cache the preprocessing step and assign globally
 @cache.memoize(timeout=3600)
 def prepare_data():
@@ -54,29 +48,55 @@ def prepare_data():
     sorted_df = new_df_with_unique_labels.sort_values(by='SubCatLbl')
     sorted_df['GLabel'] = pd.Categorical(sorted_df['GLabel'], categories=desired_order, ordered=True)
     sorted_df = sorted_df.sort_values('GLabel')
+    sorted_df.to_parquet('preprocessed_data.parquet', engine='pyarrow')
     all_glabels_sorted = sorted_df['GLabel'].unique()
     year_glabel_mapping = new_df_with_unique_labels.groupby('YEAR')['GLabel'].unique().to_dict()
     return new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping
 
-#cache--------------------------------------------------------------------------------------------------
+@cache.memoize(timeout=3600)
+def load_data():
+    df = pd.read_parquet('preprocessed_data.parquet', engine='pyarrow')
+    df['GLabel'] = pd.Categorical(df['GLabel'], categories=desired_order, ordered=True)
+    year_glabel_mapping = df.groupby('YEAR')['GLabel'].unique().to_dict()
+    all_glabels = df['GLabel'].unique()
+    return df, all_glabels, year_glabel_mapping
+
 # Assign the cached (or computed) values to global variables
 new_df_with_unique_labels, all_glabels_sorted, year_glabel_mapping = prepare_data()
 
+# --- MODIFIED LAYOUT: Two rows, first row with two columns ---
 app.layout = html.Div([
-    dcc.Dropdown(
-        id='most-recent-name-dropdown',
-        options=[{'label': name, 'value': name} for name in new_data['MostRecentName'].unique()],
-        placeholder="Select a MostRecentName"
-    ),
-    html.Div(id='link-unit-display'),
-    html.Table(id='year-glabel-table')
+    # First Row
+    html.Div([
+        # Left column
+        html.Div([
+            dcc.Dropdown(
+                id='most-recent-name-dropdown',
+                options=[{'label': name, 'value': name} for name in new_data['MostRecentName'].unique()],
+                placeholder="Select a MostRecentName"
+            ),
+            html.Div(id='link-unit-display'),
+        ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top', 'paddingRight': '20px'}),
+        # Right column
+        html.Div([
+            html.Table(id='year-glabel-table')
+        ], style={'width': '68%', 'display': 'inline-block', 'verticalAlign': 'top'}),
+    ], style={'width': '100%', 'display': 'flex', 'flexDirection': 'row', 'marginBottom': '30px'}),
+    # Second Row (optional, add your content here)
+    html.Div([
+        # Example: html.H2("Additional Content Goes Here")
+    ], style={'width': '100%'})
 ])
 
 @app.server.route('/get_data')
 def get_data():
-    return jsonify(new_data.to_dict(orient="records"))
+    return Response(
+        orjson.dumps(new_data.to_dict(orient="records")),
+        mimetype='application/json'
+    )
 
-#cache--------------------------------------------------------------------------------------------------
+app.config.suppress_callback_exceptions = True
+
 @cache.memoize(timeout=300)
 def get_filtered_data(selected_most_recent_name):
     return new_data[new_data['MostRecentName'] == selected_most_recent_name]
@@ -84,7 +104,8 @@ def get_filtered_data(selected_most_recent_name):
 @app.callback(
     [Output('year-glabel-table', 'children'),
      Output('link-unit-display', 'children')],
-    [Input('most-recent-name-dropdown', 'value')]
+    [Input('most-recent-name-dropdown', 'value')],
+    prevent_initial_call=True
 )
 def update_table(selected_most_recent_name):
     years = sorted(new_data['YEAR'].unique())
@@ -93,7 +114,6 @@ def update_table(selected_most_recent_name):
     filtered_data = get_filtered_data(selected_most_recent_name)
     link_unit_exists = 'LinkUnit' in filtered_data.columns and not filtered_data['LinkUnit'].isnull().all()
 
-    # table_header_cells = [html.Th("Year")] + [html.Th(year) for year in years]
     table_header_cells = [html.Th("GLabel")] + [html.Th(year) for year in years]
     if link_unit_exists:
         table_header_cells.append(html.Th("LinkUnit"))
@@ -127,7 +147,7 @@ def update_table(selected_most_recent_name):
                     )
                     link_unit_display.append(html.Span(", ", style={'font-weight': 'normal'}))
     if link_unit_display:
-        link_unit_display = link_unit_display[:-1]  # Remove last comma
+        link_unit_display = link_unit_display[:-1]
 
     table_rows = []
     max_rows = max(len(year_glabel_mapping.get(year, [])) for year in years)
