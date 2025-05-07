@@ -21,7 +21,7 @@ desired_order = [
 
 def get_unique_labels_for_year_degree_label(year, degree_label, data_frame):
     filtered_df = data_frame[(data_frame['year'] == year) & (data_frame['degree_label'] == degree_label)]
-    unique_labels = filtered_df.sort_values(by='cons_cat_value')['class_status'].unique().tolist()
+    unique_labels = filtered_df.sort_values(by='const_cat_value')['class_status'].unique().tolist()
     return unique_labels
 
 # Prepare data
