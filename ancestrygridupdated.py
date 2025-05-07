@@ -4,8 +4,8 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
-# Load your data
-new_data = pd.read_parquet('new_updated_data.parquet')
+# Load your data (replace with your actual filename)
+new_data = pd.read_csv('new_data.csv')
 
 # Define the desired order for degree_label
 desired_order = [
@@ -19,7 +19,7 @@ desired_order = [
     'Not in'
 ]
 
-def get_unique_labels_for_year_glabel(year, degree_label, data_frame):
+def get_unique_labels_for_year_degree_label(year, degree_label, data_frame):
     filtered_df = data_frame[(data_frame['year'] == year) & (data_frame['degree_label'] == degree_label)]
     unique_labels = filtered_df.sort_values(by='cons_cat_value')['class_status'].unique().tolist()
     return unique_labels
@@ -104,7 +104,7 @@ def update_table(selected_current_name):
     for degree_label in all_degree_labels_sorted:
         for year in years:
             if degree_label in year_degree_label_mapping.get(year, []):
-                labels = get_unique_labels_for_year_glabel(year, degree_label, new_df_with_unique_labels)
+                labels = get_unique_labels_for_year_degree_label(year, degree_label, new_df_with_unique_labels)
                 cell_content = [
                     html.P(
                         label,
