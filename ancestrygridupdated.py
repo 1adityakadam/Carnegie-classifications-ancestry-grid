@@ -5,7 +5,7 @@ from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
 # Load your data (replace with your actual filename)
-new_data = pd.read_csv('new_data.csv')
+new_data = pd.read_csv('new_updated_data.csv')
 
 # Define the desired order for degree_label
 desired_order = [
