@@ -4,8 +4,8 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
-# Load data
-new_data = pd.read_parquet('new_updated_data.parquet')
+# Load your data
+new_data = pd.read_parquet('updated_data.parquet')
 
 # Define the desired order for degree_label
 desired_order = [
