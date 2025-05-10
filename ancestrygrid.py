@@ -5,7 +5,10 @@ import pandas as pd
 import json
 
 # Load your data
-new_data = pd.read_parquet('updated_data.parquet')
+new_data = pd.read_parquet(
+    'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
+    storage_options={"anon": True}
+)
 
 # Define the desired order for degree_label
 desired_order = [
