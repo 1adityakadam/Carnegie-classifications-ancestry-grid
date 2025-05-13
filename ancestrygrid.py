@@ -19,7 +19,7 @@ name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
 
 # Load merged institution mappings (precomputed)
 merged_maps = pq.read_table(
-    's3://cchie-vborden/updated_data_grouped/merged_mappings.parquet',
+    's3://cchie-vborden/merged_mappings.parquet',
     filesystem=fs
 ).to_pandas()
 merged_into_map = merged_maps.set_index('unit_id')['current_name'].to_dict()
