@@ -44,7 +44,9 @@ app.layout = html.Div([
         options=[{'label': name, 'value': name} for name in new_data['current_name'].unique()],
         placeholder="Select a Current Name"
     ),
+    html.Div(style={'height': '20px'}),
     html.Div(id='merged-into-display'),
+    html.Div(style={'height': '20px'}),
     html.Table(id='year-degree-label-table')
 ])
 
