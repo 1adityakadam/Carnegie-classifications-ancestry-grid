@@ -89,16 +89,48 @@ def update_table(selected_current_name):
     )
     filtered_data = group_data[group_data['current_name'] == selected_current_name]
 
-    # Prepare table data (unchanged)
+    # Get years and institution names from full dataset
+    years = sorted(new_data['year'].unique())
+    inst_name_by_year = new_data[new_data['current_name'] == selected_current_name].groupby('year')['inst_name'].first().to_dict()
+
+    # Prepare table header
+    merged_into_exists = 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all()
+    
+    # Create table header cells
+    table_header_cells = [html.Th("Year")] + [html.Th(year) for year in years]
+    if merged_into_exists:
+        table_header_cells.append(html.Th("Merged Into"))
+    table_header = html.Tr(table_header_cells)
+
+    # Create institution name row
+    inst_name_row_cells = [html.Th("Institution Name")] + [
+        html.Th(inst_name_by_year.get(year, 'N/A')) for year in years
+    ]
+    if merged_into_exists:
+        merged_into_value = filtered_data['merged_into_id'].iloc[0]
+        inst_name_row_cells.append(html.Th(str(merged_into_value)))
+    inst_name_row = html.Tr(inst_name_row_cells)
+
+    # Prepare table content (degree labels and class statuses)
     new_df_with_unique_labels = filtered_data.drop_duplicates(subset=['year', 'degree_label', 'class_status'])
     sorted_df = new_df_with_unique_labels.sort_values(by='degree_id')
     sorted_df['degree_label'] = pd.Categorical(sorted_df['degree_label'], categories=desired_order, ordered=True)
     sorted_df = sorted_df.sort_values('degree_label')
-    all_degree_labels_sorted = sorted_df['degree_label'].unique()
     year_degree_label_mapping = new_df_with_unique_labels.groupby('year')['degree_label'].unique().to_dict()
-    years = sorted(filtered_data['year'].unique())
-    inst_name_by_year = filtered_data.groupby('year')['inst_name'].first().to_dict()
-    merged_into_exists = 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all()
+
+    # Build table rows
+    table_rows = []
+    for degree_label in desired_order:
+        cells = [html.Td(degree_label)]
+        for year in years:
+            labels = get_unique_labels_for_year_degree_label(year, degree_label, filtered_data)
+            cell_content = ", ".join(labels) if labels else "N/A"
+            cells.append(html.Td(cell_content))
+        
+        if merged_into_exists:
+            cells.append(html.Td())  # Empty cell for merged into column
+        
+        table_rows.append(html.Tr(cells))
 
     # Merge logic fixes (using new_data from paste-2.txt)
     display_elements = []
