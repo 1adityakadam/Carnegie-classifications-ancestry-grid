@@ -4,11 +4,14 @@ from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 import json
 
-# Load data
-new_data = pd.read_parquet(
-    'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
-    storage_options={"anon": True}
-)
+# Load data from s3 bucket (currently not functional)
+# new_data = pd.read_parquet(
+#     'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
+#     storage_options={"anon": True}
+# )
+
+#Load data
+new_data = pd.read_parquet('updated_data.parquet')
 
 # Define the desired order for degree_label
 desired_order = [
