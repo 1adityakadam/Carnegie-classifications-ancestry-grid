@@ -3,13 +3,12 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 import json
-import dask.dataframe as dd
 
-# Read only the 2022 partition if you have partitioned by 'year'
-new_data = dd.read_parquet(
-    's3://cchie-vborden/updated_data.parquet/year=2022/',
+# Load data
+new_data = pd.read_parquet(
+    'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
     storage_options={"anon": True}
-).compute()
+)
 
 # Define the desired order for degree_label
 desired_order = [
