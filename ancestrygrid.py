@@ -47,8 +47,16 @@ app.layout = html.Div([
     html.Div(style={'height': '20px'}),
     html.Div(id='merged-into-display'),
     html.Div(style={'height': '20px'}),
-    html.Table(id='year-degree-label-table')
-])
+    html.Table(id='year-degree-label-table'),
+    ],
+    style={
+        "border": "1px solid #1E90FF",       # Blue border
+        "borderRadius": "5px",               # Rounded corners
+        "padding": "10px",                   # Space inside the box
+        "backgroundColor": "#F0F8FF",        # Light blue background (AliceBlue)
+        "margin": "40px auto"                # Optional: center on page
+    }
+)
 
 @app.callback(
     [Output('year-degree-label-table', 'children'),
