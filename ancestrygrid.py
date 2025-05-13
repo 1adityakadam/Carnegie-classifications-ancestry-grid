@@ -2,75 +2,60 @@ import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
-import pyarrow.parquet as pq
-import s3fs
+import json
 
-# --- S3 and Partition Setup ---
-fs = s3fs.S3FileSystem(anon=True, client_kwargs={'region_name': 'us-east-2'})
+# Load data
+new_data = pd.read_parquet(
+    'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
+    storage_options={"anon": True}
+)
 
-# Load unique names and mapping from partitioned data
-unique_names_df = pq.read_table(
-    's3://cchie-vborden/updated_data_grouped/',
-    filesystem=fs,
-    columns=['current_name']
-).to_pandas()
-unique_names = sorted(unique_names_df['current_name'].unique())
-name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
-
-# Load merged institution mappings (precomputed)
-merged_maps = pq.read_table(
-    's3://cchie-vborden/merged_mappings.parquet',
-    filesystem=fs
-).to_pandas()
-merged_into_map = merged_maps.set_index('unit_id')['current_name'].to_dict()
-merged_from_map = merged_maps.set_index('unit_id')['inst_name'].to_dict()
-
-# --- Degree label order ---
+# Define the desired order for degree_label
 desired_order = [
-    'Doctoral', "Master's", "Bachelor's", 'Associates',
-    'SF: 2Yr', 'SF: 4Yr', 'Tribal/Oth', 'Not in'
+    'Doctoral',
+    "Master's",
+    "Bachelor's",
+    'Associates',
+    'SF: 2Yr',
+    'SF: 4Yr',
+    'Tribal/Oth',
+    'Not in'
 ]
-
-# --- Helper Functions ---
-def load_partition(selected_name):
-    group_id = name_to_group.get(selected_name)
-    if group_id is None:
-        return pd.DataFrame()
-    try:
-        return pq.read_table(
-            f's3://cchie-vborden/updated_data_grouped/group_id={group_id}',
-            filters=[('current_name', '==', selected_name)],
-            filesystem=fs
-        ).to_pandas()
-    except Exception:
-        return pd.DataFrame()
 
 def get_unique_labels_for_year_degree_label(year, degree_label, data_frame):
     filtered_df = data_frame[(data_frame['year'] == year) & (data_frame['degree_label'] == degree_label)]
     unique_labels = filtered_df.sort_values(by='const_cat_value')['class_status'].unique().tolist()
     return unique_labels
 
-# --- Dash App ---
+# Prepare data
+new_df_with_unique_labels = new_data.drop_duplicates(subset=['year', 'degree_label', 'class_status'])
+sorted_df = new_df_with_unique_labels.sort_values(by='degree_id')
+sorted_df['degree_label'] = pd.Categorical(sorted_df['degree_label'], categories=desired_order, ordered=True)
+sorted_df = sorted_df.sort_values('degree_label')
+all_degree_labels_sorted = sorted_df['degree_label'].unique()
+year_degree_label_mapping = new_df_with_unique_labels.groupby('year')['degree_label'].unique().to_dict()
+
 app = dash.Dash(__name__)
 server = app.server
 
 app.layout = html.Div([
     dcc.Dropdown(
         id='current-name-dropdown',
-        options=[{'label': name, 'value': name} for name in unique_names],
+        options=[{'label': name, 'value': name} for name in new_data['current_name'].unique()],
         placeholder="Select a Current Name"
     ),
     html.Div(style={'height': '20px'}),
     html.Div(id='merged-into-display'),
     html.Div(style={'height': '20px'}),
     html.Table(id='year-degree-label-table'),
-], style={
-    "border": "1px solid #1E90FF",
-    "borderRadius": "5px",
-    "padding": "10px",
-    "backgroundColor": "#F0F8FF",
-    "margin": "40px auto"
-})
+    ],
+    style={
+        "borderRadius": "5px",               
+        "padding": "10px",                   
+        "backgroundColor": "#F0F8FF",        
+        "margin": "40px auto"                
+    }
+)
 
 @app.callback(
     [Output('year-degree-label-table', 'children'),
@@ -81,83 +66,77 @@ def update_table(selected_current_name):
     if not selected_current_name:
         return [], ""
 
-    # Load only relevant partition
-    new_data = load_partition(selected_current_name)
-    if new_data.empty:
-        return [], ""
-
-    # Prepare year and institution name mapping
     years = sorted(new_data['year'].unique())
-    inst_name_by_year = new_data.groupby('year')['inst_name'].first().to_dict()
+    inst_name_by_year = new_data[new_data['current_name'] == selected_current_name].groupby('year')['inst_name'].first().to_dict()
 
-    # Prepare degree label mappings
-    new_df_with_unique_labels = new_data.drop_duplicates(subset=['year', 'degree_label', 'class_status'])
-    sorted_df = new_df_with_unique_labels.sort_values(by='degree_id')
-    sorted_df['degree_label'] = pd.Categorical(sorted_df['degree_label'], categories=desired_order, ordered=True)
-    sorted_df = sorted_df.sort_values('degree_label')
-    all_degree_labels_sorted = sorted_df['degree_label'].unique()
-    year_degree_label_mapping = new_df_with_unique_labels.groupby('year')['degree_label'].unique().to_dict()
+    filtered_data = new_data[new_data['current_name'] == selected_current_name]
+    merged_into_exists = 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all()
 
-    # --- Table header ---
-    merged_into_exists = 'merged_into_id' in new_data.columns and not new_data['merged_into_id'].isnull().all()
     table_header_cells = [html.Th("Year")] + [html.Th(year) for year in years]
     if merged_into_exists:
         table_header_cells.append(html.Th("Merged Into"))
     table_header = html.Tr(table_header_cells)
 
-    # --- Institution name row ---
     inst_name_row_cells = [html.Th("Institution Name")] + [html.Th(inst_name_by_year.get(year, 'N/A')) for year in years]
     if merged_into_exists:
-        merged_into_value = new_data['merged_into_id'].iloc[0]
+        merged_into_value = filtered_data['merged_into_id'].iloc[0]
         inst_name_row_cells.append(html.Th(merged_into_value))
     inst_name_row = html.Tr(inst_name_row_cells)
 
-    # --- Merged Into and Merged From Display ---
     display_elements = []
-
     # --- Merged Into ---
-    if 'merged_into_id' in new_data.columns and not new_data['merged_into_id'].isnull().all():
-        merged_into_value = new_data['merged_into_id'].dropna().unique()[0]
-        merged_into_name = merged_into_map.get(merged_into_value)
+    if 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all():
+        merged_into_value = filtered_data['merged_into_id'].dropna().unique()[0]
+        associated_data = new_data[new_data['unit_id'] == merged_into_value]
+        associated_names = [name for name in associated_data['current_name'].unique().tolist() if pd.notnull(name) and name != "None"]
+
         display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
         display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
-        if merged_into_name:
+        if associated_names:
             display_elements.append(html.Span(", Merged Into Name: ", style={'font-weight': 'bold'}))
-            display_elements.append(
-                html.A(
-                    f"{merged_into_name}", href="#",
-                    id={'type': 'merge-link', 'unit_id': str(merged_into_value), 'index': 0},
-                    **{'data-value': merged_into_name},
-                    style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
+            for i, name in enumerate(associated_names):
+                # Make link ID unique by including merged_into_value
+                display_elements.append(
+                    html.A(
+                        f"{name}", href="#",
+                        id={'type': 'merge-link', 'unit_id': str(merged_into_value), 'index': i},
+                        **{'data-value': name},
+                        style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
+                    )
                 )
-            )
+                if i < len(associated_names) - 1:
+                    display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
 
     # --- Merged From ---
-    if 'unit_id' in new_data.columns:
-        current_unit_id = new_data['unit_id'].iloc[0]
-        # Merged from: find all institutions for which this is the merged_into_id
-        # We need to scan all mappings for this
-        merged_from_records = merged_maps[merged_maps['merged_into_id'] == current_unit_id] if 'merged_into_id' in merged_maps.columns else pd.DataFrame()
+    if 'unit_id' in filtered_data.columns:
+        current_unit_id = filtered_data['unit_id'].iloc[0]
+        merged_from_records = new_data[new_data['merged_into_id'] == current_unit_id]
         if not merged_from_records.empty:
             if display_elements:
                 display_elements.append(html.Br())
                 display_elements.append(html.Br())
             display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
-            merged_from_info = merged_from_records[['unit_id', 'inst_name']].drop_duplicates()
+            merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
-                inst_name = row['inst_name']
                 display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
-                if inst_name and inst_name != "None":
-                    display_elements.append(html.Span(", Merged From Names: ", style={'font-weight': 'bold'}))
-                    display_elements.append(
-                        html.A(
-                            f"{inst_name}", href="#",
-                            id={'type': 'merged-from-link', 'unit_id': str(unit_id), 'index': i},
-                            **{'data-value': inst_name},
-                            style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
-                        )
-                    )
+                inst_names_data = new_data[new_data['unit_id'] == unit_id]
+                if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
+                    inst_names = [name for name in inst_names_data['inst_name'].unique() if pd.notnull(name) and name != "None"]
+                    if len(inst_names) > 0:
+                        display_elements.append(html.Span(", Merged From Names: ", style={'font-weight': 'bold'}))
+                        for j, name in enumerate(inst_names):
+                            # Make link ID unique by including unit_id
+                            display_elements.append(
+                                html.A(
+                                    f"{name}", href="#",
+                                    id={'type': 'merged-from-link', 'unit_id': str(unit_id), 'index': j},
+                                    **{'data-value': row['current_name']},
+                                    style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
+                                )
+                            )
+                            if j < len(inst_names) - 1:
+                                display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
                 if i < len(merged_from_info) - 1:
                     display_elements.append(html.Br())
                     display_elements.append(html.Br())
@@ -202,6 +181,7 @@ def update_table(selected_current_name):
         row.insert(0, html.Td('           '))
         table_rows.append(html.Tr(row))
 
+    # Always return a new Div for display_elements so old links are cleared
     return [table_header, inst_name_row] + table_rows, html.Div(display_elements)
 
 @app.callback(
