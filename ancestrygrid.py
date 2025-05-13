@@ -146,19 +146,19 @@ def update_table(selected_current_name):
                 cell_content = [
                     html.P(
                         label,
-                        style={'background-color': 'yellow'} if label in new_data[
+                        style={'background-color': 'lightblue'} if label in new_data[
                             (new_data['current_name'] == selected_current_name) &
                             (new_data['year'] == year)
                         ]['class_status'].values else {}
                     )
                     for label in labels
                 ]
-                summary_style = {'background-color': '#FFD700', 'border-bottom': '1px solid black'} \
-                    if any(label.style and label.style.get('background-color') == 'yellow' for label in cell_content) else {}
+                summary_style = {'background-color': 'lightblue', 'border-bottom': '1px solid black'} \
+                    if any(label.style and label.style.get('background-color') == 'lightblue' for label in cell_content) else {}
                 columns_content[year].append(
                     html.Details(
                         [html.Summary(degree_label, style=summary_style), html.Div(cell_content)],
-                        open=any(label.style and label.style.get('background-color') == 'yellow' for label in cell_content)
+                        open=any(label.style and label.style.get('background-color') == 'lightblue' for label in cell_content)
                     )
                 )
             else:
