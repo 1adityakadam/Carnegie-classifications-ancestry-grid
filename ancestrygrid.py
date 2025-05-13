@@ -20,7 +20,7 @@ def initialize_app():
 
     # Load merged institution mappings
     merged_maps = pq.read_table(
-        's3://cchie-vborden/updated_data_grouped/_merged_mappings.parquet',
+        's3://cchie-vborden/updated_data_grouped/merged_mappings.parquet',
         filesystem=fs
     ).to_pandas()
 
