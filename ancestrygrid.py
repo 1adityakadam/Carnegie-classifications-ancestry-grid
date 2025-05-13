@@ -6,7 +6,7 @@ import pandas as pd
 # ===========================
 # Load datasets
 # ===========================
-# For partitioning
+# For partitioning - keep for efficiency
 current_name_col = pd.read_parquet(
     'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
     columns=['current_name'],
@@ -14,7 +14,7 @@ current_name_col = pd.read_parquet(
 )
 all_current_names = current_name_col['current_name'].unique().tolist()
 
-# For merge relationships (added from paste-2.txt)
+# Full dataset for complete information
 new_data = pd.read_parquet(
     'https://cchie-vborden.s3.us-east-2.amazonaws.com/updated_data.parquet',
     storage_options={"anon": True}
@@ -25,7 +25,7 @@ unique_names = sorted(all_current_names)
 name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
 
 # ===========================
-# Dash App Layout (unchanged)
+# App layout
 # ===========================
 app = dash.Dash(__name__)
 server = app.server
@@ -51,7 +51,7 @@ app.layout = html.Div([
 )
 
 # ===========================
-# Helper function & desired order (unchanged)
+# Helper function & desired order
 # ===========================
 desired_order = [
     'Doctoral',
@@ -80,20 +80,30 @@ def get_unique_labels_for_year_degree_label(year, degree_label, data_frame):
 def update_table(selected_current_name):
     if not selected_current_name:
         return [], ""
-
-    # Load partitioned data for primary table
-    group_id = name_to_group[selected_current_name]
-    group_data = pd.read_parquet(
-        f's3://cchie-vborden/updated_data_grouped/group_id={group_id}/',
-        storage_options={"anon": True}
-    )
-    filtered_data = group_data[group_data['current_name'] == selected_current_name]
-
-    # Get years and institution names from full dataset
+    
+    # Get all years and institution names from full dataset for consistency
     years = sorted(new_data['year'].unique())
     inst_name_by_year = new_data[new_data['current_name'] == selected_current_name].groupby('year')['inst_name'].first().to_dict()
-
-    # Prepare table header
+    
+    # Try to use partitioned data first
+    group_id = name_to_group[selected_current_name]
+    try:
+        group_data = pd.read_parquet(
+            f's3://cchie-vborden/updated_data_grouped/group_id={group_id}/',
+            storage_options={"anon": True}
+        )
+        filtered_data = group_data[group_data['current_name'] == selected_current_name]
+        
+        # Verify we have necessary data in the partitioned dataset
+        required_cols = ['year', 'degree_label', 'class_status', 'const_cat_value']
+        if not all(col in filtered_data.columns for col in required_cols):
+            # Fall back to full dataset if any required columns are missing
+            filtered_data = new_data[new_data['current_name'] == selected_current_name]
+    except:
+        # Fall back to full dataset if partitioned data access fails
+        filtered_data = new_data[new_data['current_name'] == selected_current_name]
+    
+    # Check if we have merged_into information
     merged_into_exists = 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all()
     
     # Create table header cells
@@ -101,42 +111,95 @@ def update_table(selected_current_name):
     if merged_into_exists:
         table_header_cells.append(html.Th("Merged Into"))
     table_header = html.Tr(table_header_cells)
-
+    
     # Create institution name row
     inst_name_row_cells = [html.Th("Institution Name")] + [
         html.Th(inst_name_by_year.get(year, 'N/A')) for year in years
     ]
     if merged_into_exists:
-        merged_into_value = filtered_data['merged_into_id'].iloc[0]
+        merged_into_value = filtered_data['merged_into_id'].dropna().unique()[0]
         inst_name_row_cells.append(html.Th(str(merged_into_value)))
     inst_name_row = html.Tr(inst_name_row_cells)
-
-    # Prepare table content (degree labels and class statuses)
+    
+    # Prepare data for table construction (from paste-3.txt)
     new_df_with_unique_labels = filtered_data.drop_duplicates(subset=['year', 'degree_label', 'class_status'])
     sorted_df = new_df_with_unique_labels.sort_values(by='degree_id')
     sorted_df['degree_label'] = pd.Categorical(sorted_df['degree_label'], categories=desired_order, ordered=True)
     sorted_df = sorted_df.sort_values('degree_label')
+    all_degree_labels_sorted = sorted_df['degree_label'].unique()
     year_degree_label_mapping = new_df_with_unique_labels.groupby('year')['degree_label'].unique().to_dict()
-
-    # Build table rows
+    
+    # Build detailed table with dropdowns (from paste-3.txt)
     table_rows = []
+    max_rows = max(len(year_degree_label_mapping.get(year, [])) for year in years)
+    columns_content = {year: [] for year in years}
+    
+    # Create dropdowns for each degree label and year
     for degree_label in desired_order:
-        cells = [html.Td(degree_label)]
         for year in years:
-            labels = get_unique_labels_for_year_degree_label(year, degree_label, filtered_data)
-            cell_content = ", ".join(labels) if labels else "N/A"
-            cells.append(html.Td(cell_content))
+            if year in year_degree_label_mapping and degree_label in year_degree_label_mapping[year]:
+                # Get class statuses for this degree/year combination
+                labels = get_unique_labels_for_year_degree_label(year, degree_label, filtered_data)
+                
+                if labels:
+                    # Create detailed dropdown content
+                    cell_content = [
+                        html.P(
+                            label,
+                            style={'background-color': 'lightblue'} if label in filtered_data[
+                                (filtered_data['year'] == year) &
+                                (filtered_data['degree_label'] == degree_label)
+                            ]['class_status'].values else {}
+                        )
+                        for label in labels
+                    ]
+                    
+                    # Determine if summary should be highlighted
+                    has_highlight = any(
+                        label in filtered_data[
+                            (filtered_data['year'] == year) &
+                            (filtered_data['degree_label'] == degree_label)
+                        ]['class_status'].values
+                        for label in labels
+                    )
+                    
+                    summary_style = {'background-color': 'lightblue', 'border-bottom': '1px solid black'} if has_highlight else {}
+                    
+                    # Create dropdown element
+                    columns_content[year].append(
+                        html.Details(
+                            [
+                                html.Summary(degree_label, style=summary_style),
+                                html.Div(cell_content)
+                            ],
+                            open=has_highlight
+                        )
+                    )
+                else:
+                    columns_content[year].append('')
+            else:
+                columns_content[year].append('')
+    
+    # Build table rows from the dropdown content
+    for i in range(max_rows):
+        row = [
+            html.Td(
+                columns_content[year][i] if i < len(columns_content[year]) else '',
+                style={'vertical-align': 'top', 'border-bottom': '2px solid #ddd'}
+            ) for year in years
+        ]
+        row.insert(0, html.Td('           '))
         
         if merged_into_exists:
-            cells.append(html.Td())  # Empty cell for merged into column
+            row.append(html.Td(''))
         
-        table_rows.append(html.Tr(cells))
-
-    # Merge logic fixes (using new_data from paste-2.txt)
+        table_rows.append(html.Tr(row))
+    
+    # Merge display logic - always use full dataset for this section
     display_elements = []
     if 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all():
         merged_into_value = filtered_data['merged_into_id'].dropna().unique()[0]
-        associated_data = new_data[new_data['unit_id'] == merged_into_value]  # Fixed
+        associated_data = new_data[new_data['unit_id'] == merged_into_value]  # Using full dataset
         associated_names = [name for name in associated_data['current_name'].unique().tolist() if pd.notnull(name) and name != "None"]
 
         display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
@@ -157,7 +220,7 @@ def update_table(selected_current_name):
 
     if 'unit_id' in filtered_data.columns:
         current_unit_id = filtered_data['unit_id'].iloc[0]
-        merged_from_records = new_data[new_data['merged_into_id'] == current_unit_id]  # Fixed
+        merged_from_records = new_data[new_data['merged_into_id'] == current_unit_id]  # Using full dataset
         if not merged_from_records.empty:
             if display_elements:
                 display_elements.append(html.Br())
@@ -167,7 +230,7 @@ def update_table(selected_current_name):
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
                 display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
-                inst_names_data = new_data[new_data['unit_id'] == unit_id]  # Fixed
+                inst_names_data = new_data[new_data['unit_id'] == unit_id]  # Using full dataset
                 if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
                     inst_names = [name for name in inst_names_data['inst_name'].unique() if pd.notnull(name) and name != "None"]
                     if len(inst_names) > 0:
@@ -187,7 +250,6 @@ def update_table(selected_current_name):
                     display_elements.append(html.Br())
                     display_elements.append(html.Br())
 
-    # Table rendering logic (unchanged)
     return [table_header, inst_name_row] + table_rows, html.Div(display_elements)
 
 # ===========================
