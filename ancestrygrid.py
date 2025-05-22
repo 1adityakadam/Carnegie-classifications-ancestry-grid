@@ -6,6 +6,7 @@ import pandas as pd
 # ===========================
 # Load datasets
 # ===========================
+
 current_name_col = pd.read_parquet(
     'updated_data.parquet',
     columns=['current_name']
@@ -20,6 +21,7 @@ name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
 # ===========================
 # Dash App Layout
 # ===========================
+
 app = dash.Dash(__name__)
 server = app.server
 
@@ -71,6 +73,7 @@ app.layout = html.Div(
 # ===========================
 # Helper function & desired order
 # ===========================
+
 desired_order = [
     'Doctoral',
     "Master's",
@@ -97,6 +100,7 @@ def get_unique_labels_for_year_degree_label(year, degree_label):
 # ===========================
 # Callback to update table and merged-into display
 # ===========================
+
 @app.callback(
     [Output('year-degree-label-table', 'children'),
      Output('merged-into-display', 'children')],
@@ -137,7 +141,10 @@ def update_table(selected_current_name):
         'whiteSpace': 'normal',
         'wordBreak': 'break-word',
         'padding': '8px',
-        'textAlign': 'left'
+        'textAlign': 'left',
+         #---------------------------------------May 22, 2025-------
+        'backgroundColor': '#e6f2ff',
+         #---------------------------------------May 22, 2025-------
     })] + [
         html.Th(year, style={
             'width': col_width,
@@ -146,7 +153,10 @@ def update_table(selected_current_name):
             'whiteSpace': 'normal',
             'wordBreak': 'break-word',
             'padding': '8px',
-            'textAlign': 'left'
+            'textAlign': 'left',
+             #---------------------------------------May 22, 2025-------
+            'backgroundColor': '#e6f2ff',
+             #---------------------------------------May 22, 2025-------
         }) for year in years
     ]
     
@@ -175,9 +185,11 @@ def update_table(selected_current_name):
         'wordBreak': 'break-word',
         'padding': '8px',
         'textAlign': 'left',
+        
          #---------------------------------------May 22, 2025-------
         'backgroundColor': '#e6f2ff',
          #---------------------------------------May 22, 2025-------
+        
     })] + [
         html.Th(inst_name_by_year.get(year, 'N/A'), style={
             'width': col_width,
