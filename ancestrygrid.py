@@ -329,7 +329,7 @@ def update_table(selected_current_name):
         ]
         
         # display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
-        display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
+        # display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
         
         if associated_names:
             display_elements.append(html.Span(", Merged Into: ", style={'font-weight': 'bold'}))
