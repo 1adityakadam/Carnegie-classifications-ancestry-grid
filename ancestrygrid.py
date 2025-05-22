@@ -221,7 +221,7 @@ def update_table(selected_current_name):
                 'width': col_width,
                 'minWidth': '10px',
                     # 70px,
-                'maxWidth': 20px,
+                'maxWidth': '20px',
                     # col_width,
                 'whiteSpace': 'normal',
                 'wordBreak': 'break-word',
