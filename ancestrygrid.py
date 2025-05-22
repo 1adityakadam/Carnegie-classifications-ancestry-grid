@@ -3,9 +3,8 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
-# ===========================
+
 # Load datasets
-# ===========================
 
 current_name_col = pd.read_parquet(
     'updated_data.parquet',
@@ -18,9 +17,8 @@ new_data = pd.read_parquet('updated_data.parquet')
 unique_names = sorted(all_current_names)
 name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
 
-# ===========================
+
 # Dash App Layout
-# ===========================
 
 app = dash.Dash(__name__)
 server = app.server
@@ -43,7 +41,7 @@ app.layout = html.Div(
                         id='year-degree-label-table',
                         style={
                             'width': '100%',
-                            'tableLayout': 'fixed',       # Ensures equal column width
+                            'tableLayout': 'fixed',
                             'borderCollapse': 'collapse'
                         }
                     ),
@@ -51,7 +49,6 @@ app.layout = html.Div(
                     style={
                         'width': '100%',
                         'maxWidth': '100%',
-                        # No overflowX here, so no horizontal scrollbar
                     }
                 ),
             ],
@@ -70,9 +67,7 @@ app.layout = html.Div(
     style={"height": "100vh"}
 )
 
-# ===========================
 # Helper function & desired order
-# ===========================
 
 desired_order = [
     'Doctoral',
@@ -97,9 +92,7 @@ def get_unique_labels_for_year_degree_label(year, degree_label):
     )
     return unique_labels
 
-# ===========================
 # Callback to update table and merged-into display
-# ===========================
 
 @app.callback(
     [Output('year-degree-label-table', 'children'),
@@ -160,19 +153,6 @@ def update_table(selected_current_name):
         }) for year in years
     ]
     
-     #---------------------------------------Earlier than May 22, 2025-------
-    # if merged_into_exists:
-    #     table_header_cells.append(html.Th("Merged Into", style={
-    #         'width': col_width,
-    #         'minWidth': '70px',
-    #         'maxWidth': col_width,
-    #         'whiteSpace': 'normal',
-    #         'wordBreak': 'break-word',
-    #         'padding': '8px',
-    #         'textAlign': 'left'
-    #     }))
-     #---------------------------------------Earlier than May 22, 2025-------
-    
     table_header = html.Tr(table_header_cells)
 
     # Institution name row
@@ -205,20 +185,6 @@ def update_table(selected_current_name):
         }) for year in years
     ]
     
-    #---------------------------------------Earlier than May 22, 2025-------
-    # if merged_into_exists:
-    #     merged_into_value = filtered_data['merged_into_id'].iloc[0]
-    #     inst_name_row_cells.append(html.Th(str(merged_into_value), style={
-    #         'width': col_width,
-    #         'minWidth': '70px',
-    #         'maxWidth': col_width,
-    #         'whiteSpace': 'normal',
-    #         'wordBreak': 'break-word',
-    #         'padding': '8px',
-    #         'textAlign': 'left'
-    #     }))
-    #---------------------------------------Earlier than May 22, 2025-------
-    
     inst_name_row = html.Tr(inst_name_row_cells)
 
     # Build table rows
@@ -227,19 +193,20 @@ def update_table(selected_current_name):
         #---------------------------------------May 22, 2025-------
         cells = [
             html.Td(
-                # degree_label, 
-                style={
-                'verticalAlign': 'top',
-                'fontWeight': 'bold',
-                # 'backgroundColor': '#e6f2ff',
-                'width': '20px',
-                'minWidth': '10px',
-                'maxWidth': '20px',
-                'whiteSpace': 'normal',
-                'wordBreak': 'break-word',
-                'textAlign': 'left',
-                'padding': '8px'
-            })
+            #     # degree_label, 
+            #     style={
+            #     'verticalAlign': 'top',
+            #     'fontWeight': 'bold',
+            #     # 'backgroundColor': '#e6f2ff',
+            #     'width': '20px',
+            #     'minWidth': '10px',
+            #     'maxWidth': '20px',
+            #     'whiteSpace': 'normal',
+            #     'wordBreak': 'break-word',
+            #     'textAlign': 'left',
+            #     'padding': '8px'
+            # }
+            )
         ]
         #---------------------------------------May 22, 2025-------
         for year in years:
@@ -328,11 +295,8 @@ def update_table(selected_current_name):
             if pd.notnull(name) and name != "None"
         ]
         
-        # display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
-        # display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
-        
         if associated_names:
-            display_elements.append(html.Span(", Merged Into: ", style={'font-weight': 'bold'}))
+            display_elements.append(html.Span("Absorbed: ", style={'font-weight': 'bold'}))
             for i, name in enumerate(associated_names):
                 display_elements.append(
                     html.A(
@@ -353,13 +317,9 @@ def update_table(selected_current_name):
                 display_elements.append(html.Br())
                 display_elements.append(html.Br())
                 
-
-            # display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
             merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
-                
-                # display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
                 
                 inst_names_data = new_data[new_data['unit_id'] == unit_id]
                 if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
@@ -369,7 +329,7 @@ def update_table(selected_current_name):
                     ]
                     if inst_names:
                         # ----------------------------------------------------------------------------May 22, 2025---------------------------------
-                        display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
+                        display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
                         # -------------------------------------------------------------------------------------------------------------------------
                         for j, name in enumerate(inst_names):
                             display_elements.append(
@@ -388,9 +348,8 @@ def update_table(selected_current_name):
 
     return [table_header, inst_name_row] + table_rows, html.Div(display_elements)
 
-# ===========================
 # Callback for dropdown link clicks
-# ===========================
+
 @app.callback(
     Output('current-name-dropdown', 'value'),
     [
