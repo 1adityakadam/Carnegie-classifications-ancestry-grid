@@ -346,7 +346,8 @@ def update_table(selected_current_name):
             merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
-                display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
+                
+                # display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
                 
                 inst_names_data = new_data[new_data['unit_id'] == unit_id]
                 if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
@@ -356,7 +357,7 @@ def update_table(selected_current_name):
                     ]
                     if inst_names:
                         # ----------------------------------------------------------------------------May 22, 2025---------------------------------
-                        display_elements.append(html.Span(", Merged From: ", style={'font-weight': 'bold'}))
+                        display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
                         # -------------------------------------------------------------------------------------------------------------------------
                         for j, name in enumerate(inst_names):
                             display_elements.append(
