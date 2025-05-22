@@ -191,23 +191,23 @@ def update_table(selected_current_name):
     table_rows = []
     for degree_label in desired_order:
         #---------------------------------------May 22, 2025-------
-        cells = [
-            html.Td(
-            #     # degree_label, 
-            #     style={
-            #     'verticalAlign': 'top',
-            #     'fontWeight': 'bold',
-            #     # 'backgroundColor': '#e6f2ff',
-            #     'width': '20px',
-            #     'minWidth': '10px',
-            #     'maxWidth': '20px',
-            #     'whiteSpace': 'normal',
-            #     'wordBreak': 'break-word',
-            #     'textAlign': 'left',
-            #     'padding': '8px'
-            # }
-            )
-        ]
+        # cells = [
+        #     html.Td(
+        #     #     # degree_label, 
+        #     #     style={
+        #     #     'verticalAlign': 'top',
+        #     #     'fontWeight': 'bold',
+        #     #     # 'backgroundColor': '#e6f2ff',
+        #     #     'width': '20px',
+        #     #     'minWidth': '10px',
+        #     #     'maxWidth': '20px',
+        #     #     'whiteSpace': 'normal',
+        #     #     'wordBreak': 'break-word',
+        #     #     'textAlign': 'left',
+        #     #     'padding': '8px'
+        #     # }
+        #     )
+        # ]
         #---------------------------------------May 22, 2025-------
         for year in years:
             all_statuses = get_unique_labels_for_year_degree_label(year, degree_label)
@@ -272,18 +272,18 @@ def update_table(selected_current_name):
                 }
             ))
 
-        if merged_into_exists:
-            cells.append(html.Td("", style={
-                'width': col_width,
-                'minWidth': '70px',
-                'maxWidth': col_width,
-                'whiteSpace': 'normal',
-                'wordBreak': 'break-word',
-                'padding': '8px',
-                'textAlign': 'left'
-            }))
+        # if merged_into_exists:
+        #     cells.append(html.Td("", style={
+        #         'width': col_width,
+        #         'minWidth': '70px',
+        #         'maxWidth': col_width,
+        #         'whiteSpace': 'normal',
+        #         'wordBreak': 'break-word',
+        #         'padding': '8px',
+        #         'textAlign': 'left'
+        #     }))
 
-        table_rows.append(html.Tr(cells))
+        # table_rows.append(html.Tr(cells))
 
     # Merge logic fixes (using new_data from updated_data.parquet)
     display_elements = []
