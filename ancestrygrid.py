@@ -218,11 +218,9 @@ def update_table(selected_current_name):
                 'verticalAlign': 'top',
                 'fontWeight': 'bold',
                 # 'backgroundColor': '#e6f2ff',
-                'width': col_width,
+                'width': '20px',
                 'minWidth': '10px',
-                    # 70px,
                 'maxWidth': '20px',
-                    # col_width,
                 'whiteSpace': 'normal',
                 'wordBreak': 'break-word',
                 'textAlign': 'left',
@@ -316,10 +314,8 @@ def update_table(selected_current_name):
             if pd.notnull(name) and name != "None"
         ]
         
-        #---------------------------------------May 22, 2025-------
-        # display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
-        # display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
-        #---------------------------------------May 22, 2025-------
+        display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
+        display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
         
         if associated_names:
             display_elements.append(html.Span(", Merged Into: ", style={'font-weight': 'bold'}))
@@ -334,11 +330,6 @@ def update_table(selected_current_name):
                 )
                 if i < len(associated_names) - 1:
                     display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
-            #---------------------------------------May 22, 2025-------
-            display_elements.append(html.Span(", (", style={'font-weight': 'bold'}))
-            
-            display_elements.append(html.Span(" )", style={'font-weight': 'bold'}))
-            #---------------------------------------May 22, 2025-------
     
     if 'unit_id' in filtered_data.columns:
         current_unit_id = filtered_data['unit_id'].iloc[0]
@@ -348,13 +339,12 @@ def update_table(selected_current_name):
                 display_elements.append(html.Br())
                 display_elements.append(html.Br())
                 
-                # -----------------------------------------------------------------------------May 22, 2025----------------------------------------
-            # display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
-            # merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
-            # for i, (idx, row) in enumerate(merged_from_info.iterrows()):
-            #     unit_id = row['unit_id']
-            #     display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
-                # -------------------------------------------------------------------------------------------------------------------------
+
+            display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
+            merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
+            for i, (idx, row) in enumerate(merged_from_info.iterrows()):
+                unit_id = row['unit_id']
+                display_elements.append(html.Span(f"{unit_id}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
                 
                 inst_names_data = new_data[new_data['unit_id'] == unit_id]
                 if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
