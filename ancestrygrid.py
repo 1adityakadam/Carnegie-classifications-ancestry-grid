@@ -149,6 +149,7 @@ def update_table(selected_current_name):
             'textAlign': 'left'
         }) for year in years
     ]
+    
      #---------------------------------------Earlier than May 22, 2025-------
     # if merged_into_exists:
     #     table_header_cells.append(html.Th("Merged Into", style={
@@ -161,6 +162,7 @@ def update_table(selected_current_name):
     #         'textAlign': 'left'
     #     }))
      #---------------------------------------Earlier than May 22, 2025-------
+    
     table_header = html.Tr(table_header_cells)
 
     # Institution name row
@@ -314,7 +316,7 @@ def update_table(selected_current_name):
             if pd.notnull(name) and name != "None"
         ]
         
-        display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
+        # display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
         display_elements.append(html.Span(f"{merged_into_value}", style={'background-color': 'lightblue', 'font-weight': 'bold'}))
         
         if associated_names:
@@ -340,7 +342,7 @@ def update_table(selected_current_name):
                 display_elements.append(html.Br())
                 
 
-            display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
+            # display_elements.append(html.Span("Merged From: ", style={'font-weight': 'bold'}))
             merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
