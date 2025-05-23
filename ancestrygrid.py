@@ -185,9 +185,8 @@ def update_table(selected_current_name):
     
     inst_name_row = html.Tr(inst_name_row_cells, style={
             'backgroundColor': '#e6f2ff',
-            'borderRadius': '5px',
-            'paddingLeft': '2px',
-            'paddingRight': '2px'
+            'paddingLeft': '3px',
+            'paddingRight': '3px'
     })
 
     # Build table rows
