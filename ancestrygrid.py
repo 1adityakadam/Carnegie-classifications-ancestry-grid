@@ -38,7 +38,9 @@ app = dash.Dash(__name__)
 server = app.server
 
 app.layout = html.Div(
-    [
+    [   html.Style("""
+            html, body { overflow: hidden !important; height: 100% !important; }
+        """),
         dcc.Dropdown(
             id='current-name-dropdown',
             options=dropdown_options,
@@ -67,7 +69,7 @@ app.layout = html.Div(
                 ),
             ],
             style={
-                "height": "90vh",
+                "height": "100vh",
                 "borderRadius": "8px",
                 "padding": "18px",
                 "margin": "5px",
