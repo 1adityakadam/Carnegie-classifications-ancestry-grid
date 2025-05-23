@@ -3,45 +3,37 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
-
-# Load datasets
-
-# current_name_col = pd.read_parquet(
-#     'updated_data.parquet',
-#     columns=['current_name']
-# )
-# all_current_names = current_name_col['current_name'].unique().tolist()
-
-# new_data = pd.read_parquet('updated_data.parquet')
-
-# unique_names = sorted(all_current_names)
-# name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
-
-
 # Load data for dropdown and grouping
 dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name'])
 dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name'])
 
-# Build sorted dropdown options
+# Build dropdown options: group by current_name, collect all unique past names
 dropdown_options = []
-for _, row in dropdown_df.iterrows():
-    current_name = row['current_name']
-    inst_name = row['inst_name']
-    label = f"{current_name} (past: {inst_name})" if pd.notna(inst_name) and inst_name != "N/A" else current_name
+for current_name, group in dropdown_df.groupby('current_name'):
+    # Collect all unique, non-null, non-N/A past names for this current_name
+    past_names = sorted(
+        set(
+            name for name in group['inst_name'].unique()
+            if pd.notna(name) and name != "N/A" and name != current_name
+        )
+    )
+    if past_names:
+        label = f"{current_name} (past: {', '.join(past_names)})"
+    else:
+        label = current_name
     dropdown_options.append({'label': label, 'value': current_name})
 
-# Sort by formatted labels
+# Sort by label
 dropdown_options = sorted(dropdown_options, key=lambda x: x['label'])
 
 # Maintain original grouping logic with sorted current_names
 unique_names = [opt['value'] for opt in dropdown_options]
 name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
 
-# Keep existing data loading
+# Load the main data
 new_data = pd.read_parquet('updated_data.parquet')
 
 # Dash App Layout
-
 app = dash.Dash(__name__)
 server = app.server
 
@@ -50,7 +42,6 @@ app.layout = html.Div(
         dcc.Dropdown(
             id='current-name-dropdown',
             options=dropdown_options,
-            # [{'label': name, 'value': name} for name in sorted(all_current_names)],
             placeholder="Select Institution Name"
         ),
         
@@ -91,7 +82,6 @@ app.layout = html.Div(
 )
 
 # Helper function & desired order
-
 desired_order = [
     'Doctoral',
     "Master's",
@@ -116,7 +106,6 @@ def get_unique_labels_for_year_degree_label(year, degree_label):
     return unique_labels
 
 # Callback to update table and merged-into display
-
 @app.callback(
     [Output('year-degree-label-table', 'children'),
      Output('merged-into-display', 'children')],
@@ -147,7 +136,7 @@ def update_table(selected_current_name):
 
     # Calculate number of columns (degree label + years [+ merged_into])
     n_cols = 1 + len(years) + (1 if merged_into_exists else 0)
-    left_col_width = "80px"  # Set the left label column to be narrow
+    left_col_width = "80px"
     col_width = f"calc((100% - {left_col_width}) / {n_cols - 1})"
 
     # Table header
@@ -172,11 +161,9 @@ def update_table(selected_current_name):
             'backgroundColor': '#e6f2ff',
         }) for year in years
     ]
-    
     table_header = html.Tr(table_header_cells)
 
     # Institution name row
-    
     inst_name_row_cells = [html.Th("Institution Name", style={
         'fontWeight': 'bold',
         'width': left_col_width,
@@ -187,8 +174,6 @@ def update_table(selected_current_name):
         'padding': '8px',
         'textAlign': 'left',
         'backgroundColor': '#e6f2ff',
-
-        
     })] + [
         html.Th(inst_name_by_year.get(year, 'N/A'), style={
             'width': col_width,
@@ -201,7 +186,6 @@ def update_table(selected_current_name):
             'backgroundColor': '#e6f2ff',
         }) for year in years
     ]
-    
     inst_name_row = html.Tr(inst_name_row_cells)
 
     # Build table rows
@@ -284,7 +268,7 @@ def update_table(selected_current_name):
             ))
         table_rows.append(html.Tr(cells))
 
-    # Merge logic fixes (using new_data from updated_data.parquet)
+    # Merge/absorbed display logic
     display_elements = []
     if 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all():
         merged_into_value = filtered_data['merged_into_id'].dropna().unique()[0]
@@ -293,7 +277,6 @@ def update_table(selected_current_name):
             name for name in associated_data['current_name'].unique().tolist()
             if pd.notnull(name) and name != "None"
         ]
-        
         if associated_names:
             display_elements.append(html.Span("Absorbed: ", style={'font-weight': 'bold'}))
             for i, name in enumerate(associated_names):
@@ -307,7 +290,7 @@ def update_table(selected_current_name):
                 )
                 if i < len(associated_names) - 1:
                     display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
-    
+
     if 'unit_id' in filtered_data.columns:
         current_unit_id = filtered_data['unit_id'].iloc[0]
         merged_from_records = new_data[new_data['merged_into_id'] == current_unit_id]
@@ -315,11 +298,9 @@ def update_table(selected_current_name):
             if display_elements:
                 display_elements.append(html.Br())
                 display_elements.append(html.Br())
-                
             merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
-                
                 inst_names_data = new_data[new_data['unit_id'] == unit_id]
                 if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
                     inst_names = [
@@ -346,7 +327,6 @@ def update_table(selected_current_name):
     return [table_header, inst_name_row] + table_rows, html.Div(display_elements)
 
 # Callback for dropdown link clicks
-
 @app.callback(
     Output('current-name-dropdown', 'value'),
     [
