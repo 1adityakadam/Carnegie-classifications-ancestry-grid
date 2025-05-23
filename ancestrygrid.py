@@ -170,9 +170,7 @@ def update_table(selected_current_name):
         'whiteSpace': 'normal',
         'wordBreak': 'break-word',
         'padding': '8px',
-        'textAlign': 'left',
-        'backgroundColor': '#e6f2ff',
-        'borderRadius':'5px 5px 0px 0px'
+        'textAlign': 'left'
     })] + [
         html.Th(inst_name_by_year.get(year, 'N/A'), style={
             'width': col_width,
@@ -181,12 +179,16 @@ def update_table(selected_current_name):
             'whiteSpace': 'normal',
             'wordBreak': 'break-word',
             'padding': '8px',
-            'textAlign': 'left',
-            'backgroundColor': '#e6f2ff',
-            'borderRadius':'0px 0px 5px 5px'
+            'textAlign': 'left'
         }) for year in years
     ]
-    inst_name_row = html.Tr(inst_name_row_cells)
+    
+    inst_name_row = html.Tr(inst_name_row_cells, style={
+            'backgroundColor': '#e6f2ff',
+            'borderRadius': '5px',
+            'paddingLeft': '2px',
+            'paddingRight': '2px'
+    })
 
     # Build table rows
     table_rows = []
