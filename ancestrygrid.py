@@ -147,8 +147,7 @@ def update_table(selected_current_name):
         'whiteSpace': 'normal',
         'wordBreak': 'break-word',
         'padding': '8px',
-        'textAlign': 'left',
-        'backgroundColor': '#e6f2ff',
+        'textAlign': 'left'
     })] + [
         html.Th(year, style={
             'width': col_width,
@@ -157,8 +156,7 @@ def update_table(selected_current_name):
             'whiteSpace': 'normal',
             'wordBreak': 'break-word',
             'padding': '8px',
-            'textAlign': 'left',
-            'backgroundColor': '#e6f2ff',
+            'textAlign': 'left'
         }) for year in years
     ]
     table_header = html.Tr(table_header_cells)
