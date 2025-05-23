@@ -18,7 +18,7 @@ for current_name, group in dropdown_df.groupby('current_name'):
         )
     )
     if past_names:
-        label = f"{current_name} (past: {', '.join(past_names)})"
+        label = f"{current_name} (Earlier: {', '.join(past_names)})"
     else:
         label = current_name
     dropdown_options.append({'label': label, 'value': current_name})
