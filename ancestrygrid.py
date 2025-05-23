@@ -76,8 +76,7 @@ app.layout = html.Div(
             }
         ),
     ],
-    style={"height": "100vh",
-           "backgroundColor":"rgb(204,204,204)"
+    style={"height": "100vh"
           }
 )
 
@@ -185,7 +184,7 @@ def update_table(selected_current_name):
     ]
     
     inst_name_row = html.Tr(inst_name_row_cells, style={
-            'backgroundColor': 'rgb(63, 119, 225)'
+            'backgroundColor': 'rgba(63, 119, 225,0.3)'
     })
 
     # Build table rows
