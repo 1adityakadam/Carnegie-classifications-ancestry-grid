@@ -137,7 +137,8 @@ def update_table(selected_current_name):
     # Calculate number of columns (degree label + years [+ merged_into])
     n_cols = 1 + len(years) + (1 if merged_into_exists else 0)
     left_col_width = "80px"
-    col_width = f"calc((100% - {left_col_width}) / {n_cols - 1})"
+    col_width = f"{100/n_cols:.2f}%"
+    # f"calc((100% - {left_col_width}) / {n_cols - 1})"
 
     # Table header
     table_header_cells = [html.Th("Year", style={
