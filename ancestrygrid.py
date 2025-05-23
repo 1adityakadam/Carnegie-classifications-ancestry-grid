@@ -73,12 +73,13 @@ app.layout = html.Div(
                 "margin": "5px",
                 "maxWidth": "calc(100%-5px)",
                 "width": "calc(100%-5px)",
-                "boxShadow": "0 2px 8px #d0d6e6",
                 "overflowY": "auto"
             }
         ),
     ],
-    style={"height": "100vh"}
+    style={"height": "100vh",
+           "backgroundColor":"rgb(204,204,204)"
+          }
 )
 
 # Helper function & desired order
