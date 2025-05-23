@@ -38,10 +38,7 @@ app = dash.Dash(__name__)
 server = app.server
 
 app.layout = html.Div(
-    [   html.Style("""
-            html, body { overflow: hidden !important; height: 100% !important; }
-        """),
-        dcc.Dropdown(
+    [ dcc.Dropdown(
             id='current-name-dropdown',
             options=dropdown_options,
             placeholder="Select Institution Name"
