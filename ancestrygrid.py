@@ -164,7 +164,7 @@ def update_table(selected_current_name):
     table_header = html.Tr(table_header_cells)
 
     # Institution name row
-    inst_name_row_cells = [html.Th("Institution Name", style={
+    inst_name_row_cells = [html.Th("Inst. Name", style={
         'fontWeight': 'bold',
         'width': left_col_width,
         'minWidth': left_col_width,
@@ -186,7 +186,7 @@ def update_table(selected_current_name):
     ]
     
     inst_name_row = html.Tr(inst_name_row_cells, style={
-            'backgroundColor': 'rgba(230, 242, 255, 0.5)'
+            'backgroundColor': 'rgb(147,199,226)'
     })
 
     # Build table rows
