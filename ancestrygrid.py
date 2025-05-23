@@ -124,7 +124,7 @@ def update_table(selected_current_name):
 
     # Calculate number of columns (degree label + years [+ merged_into])
     n_cols = 1 + len(years) + (1 if merged_into_exists else 0)
-    left_col_width = "70px"  # Set the left label column to be narrow
+    left_col_width = "80px"  # Set the left label column to be narrow
     col_width = f"calc((100% - {left_col_width}) / {n_cols - 1})"
 
     # Table header
