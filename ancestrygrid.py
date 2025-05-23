@@ -278,7 +278,7 @@ def update_table(selected_current_name):
             if pd.notnull(name) and name != "None"
         ]
         if associated_names:
-            display_elements.append(html.Span("Absorbed: ", style={'font-weight': 'bold'}))
+            display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
             for i, name in enumerate(associated_names):
                 display_elements.append(
                     html.A(
@@ -308,7 +308,7 @@ def update_table(selected_current_name):
                         if pd.notnull(name) and name != "None"
                     ]
                     if inst_names:
-                        display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
+                        display_elements.append(html.Span("Absorbed: ", style={'font-weight': 'bold'}))
                         for j, name in enumerate(inst_names):
                             display_elements.append(
                                 html.A(
