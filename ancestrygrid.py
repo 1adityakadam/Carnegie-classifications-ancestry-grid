@@ -6,17 +6,39 @@ import pandas as pd
 
 # Load datasets
 
-current_name_col = pd.read_parquet(
-    'updated_data.parquet',
-    columns=['current_name']
-)
-all_current_names = current_name_col['current_name'].unique().tolist()
+# current_name_col = pd.read_parquet(
+#     'updated_data.parquet',
+#     columns=['current_name']
+# )
+# all_current_names = current_name_col['current_name'].unique().tolist()
 
-new_data = pd.read_parquet('updated_data.parquet')
+# new_data = pd.read_parquet('updated_data.parquet')
 
-unique_names = sorted(all_current_names)
+# unique_names = sorted(all_current_names)
+# name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
+
+
+# Load data for dropdown and grouping
+dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name'])
+dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name'])
+
+# Build sorted dropdown options
+dropdown_options = []
+for _, row in dropdown_df.iterrows():
+    current_name = row['current_name']
+    inst_name = row['inst_name']
+    label = f"{current_name} (past: {inst_name})" if pd.notna(inst_name) and inst_name != "N/A" else current_name
+    dropdown_options.append({'label': label, 'value': current_name})
+
+# Sort by formatted labels
+dropdown_options = sorted(dropdown_options, key=lambda x: x['label'])
+
+# Maintain original grouping logic with sorted current_names
+unique_names = [opt['value'] for opt in dropdown_options]
 name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
 
+# Keep existing data loading
+new_data = pd.read_parquet('updated_data.parquet')
 
 # Dash App Layout
 
@@ -27,8 +49,9 @@ app.layout = html.Div(
     [
         dcc.Dropdown(
             id='current-name-dropdown',
-            options=[{'label': name, 'value': name} for name in sorted(all_current_names)],
-            placeholder="Select a Current Name"
+            options=dropdown_options,
+            # [{'label': name, 'value': name} for name in sorted(all_current_names)],
+            placeholder="Select Institution Name"
         ),
         
         html.Div(style={'height': '20px'}),
