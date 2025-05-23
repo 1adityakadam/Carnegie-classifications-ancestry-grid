@@ -172,6 +172,7 @@ def update_table(selected_current_name):
         'padding': '8px',
         'textAlign': 'left',
         'backgroundColor': '#e6f2ff',
+        'borderRadius':'5px 5px 0px 0px'
     })] + [
         html.Th(inst_name_by_year.get(year, 'N/A'), style={
             'width': col_width,
@@ -182,6 +183,7 @@ def update_table(selected_current_name):
             'padding': '8px',
             'textAlign': 'left',
             'backgroundColor': '#e6f2ff',
+            'borderRadius':'0px 0px 5px 5px'
         }) for year in years
     ]
     inst_name_row = html.Tr(inst_name_row_cells)
@@ -199,7 +201,7 @@ def update_table(selected_current_name):
                 'padding': '8px',
                 'whiteSpace': 'normal',
                 'wordBreak': 'break-word',
-                'borderBottom': '2px solid #ddd'
+                'borderBottom': '2px solid #ddd',
             })
         ]
         for year in years:
