@@ -124,20 +124,19 @@ def update_table(selected_current_name):
 
     # Calculate number of columns (degree label + years [+ merged_into])
     n_cols = 1 + len(years) + (1 if merged_into_exists else 0)
-    col_width = f"{100/n_cols:.2f}%"
+    left_col_width = "60px"  # Set the left label column to be narrow
+    col_width = f"calc((100% - {left_col_width}) / {n_cols - 1})"
 
     # Table header
     table_header_cells = [html.Th("Year", style={
-        'width': col_width,
-        'minWidth': '70px',
-        'maxWidth': col_width,
+        'width': left_col_width,
+        'minWidth': left_col_width,
+        'maxWidth': left_col_width,
         'whiteSpace': 'normal',
         'wordBreak': 'break-word',
         'padding': '8px',
         'textAlign': 'left',
-         #---------------------------------------May 22, 2025-------
-        'backgroundColor': '#e8f1ff',
-         #---------------------------------------May 22, 2025-------
+        'backgroundColor': '#e6f2ff',
     })] + [
         html.Th(year, style={
             'width': col_width,
@@ -147,28 +146,25 @@ def update_table(selected_current_name):
             'wordBreak': 'break-word',
             'padding': '8px',
             'textAlign': 'left',
-             #---------------------------------------May 22, 2025-------
-            'backgroundColor': '#e8f1ff',
-             #---------------------------------------May 22, 2025-------
+            'backgroundColor': '#e6f2ff',
         }) for year in years
     ]
     
     table_header = html.Tr(table_header_cells)
 
     # Institution name row
+    
     inst_name_row_cells = [html.Th("Institution Name", style={
         'fontWeight': 'bold',
-        'width': col_width,
-        'minWidth': '70px',
-        'maxWidth': col_width,
+        'width': left_col_width,
+        'minWidth': left_col_width,
+        'maxWidth': left_col_width,
         'whiteSpace': 'normal',
         'wordBreak': 'break-word',
         'padding': '8px',
         'textAlign': 'left',
-        
-         #---------------------------------------May 22, 2025-------
         'backgroundColor': '#e6f2ff',
-         #---------------------------------------May 22, 2025-------
+
         
     })] + [
         html.Th(inst_name_by_year.get(year, 'N/A'), style={
@@ -179,9 +175,7 @@ def update_table(selected_current_name):
             'wordBreak': 'break-word',
             'padding': '8px',
             'textAlign': 'left',
-            #---------------------------------------May 22, 2025-------
             'backgroundColor': '#e6f2ff',
-            #---------------------------------------May 22, 2025-------
         }) for year in years
     ]
     
@@ -190,25 +184,19 @@ def update_table(selected_current_name):
     # Build table rows
     table_rows = []
     for degree_label in desired_order:
-        #---------------------------------------May 22, 2025-------
         cells = [
-            html.Td(
-            #     # degree_label, 
-            #     style={
-            #     'verticalAlign': 'top',
-            #     'fontWeight': 'bold',
-            #     # 'backgroundColor': '#e6f2ff',
-            #     'width': '20px',
-            #     'minWidth': '10px',
-            #     'maxWidth': '20px',
-            #     'whiteSpace': 'normal',
-            #     'wordBreak': 'break-word',
-            #     'textAlign': 'left',
-            #     'padding': '8px'
-            # }
-            )
+            html.Td("", style={
+                'width': left_col_width,
+                'minWidth': left_col_width,
+                'maxWidth': left_col_width,
+                'verticalAlign': 'top',
+                'textAlign': 'left',
+                'padding': '8px',
+                'whiteSpace': 'normal',
+                'wordBreak': 'break-word',
+                'borderBottom': '2px solid #ddd'
+            })
         ]
-        #---------------------------------------May 22, 2025-------
         for year in years:
             all_statuses = get_unique_labels_for_year_degree_label(year, degree_label)
             inst_statuses = filtered_data[
@@ -271,18 +259,6 @@ def update_table(selected_current_name):
                     'borderBottom': '2px solid #ddd'
                 }
             ))
-
-        # if merged_into_exists:
-        #     cells.append(html.Td("", style={
-        #         'width': col_width,
-        #         'minWidth': '70px',
-        #         'maxWidth': col_width,
-        #         'whiteSpace': 'normal',
-        #         'wordBreak': 'break-word',
-        #         'padding': '8px',
-        #         'textAlign': 'left'
-        #     }))
-
         table_rows.append(html.Tr(cells))
 
     # Merge logic fixes (using new_data from updated_data.parquet)
@@ -328,9 +304,7 @@ def update_table(selected_current_name):
                         if pd.notnull(name) and name != "None"
                     ]
                     if inst_names:
-                        # ----------------------------------------------------------------------------May 22, 2025---------------------------------
                         display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
-                        # -------------------------------------------------------------------------------------------------------------------------
                         for j, name in enumerate(inst_names):
                             display_elements.append(
                                 html.A(
