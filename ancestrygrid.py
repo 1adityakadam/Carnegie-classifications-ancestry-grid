@@ -276,8 +276,12 @@ def update_table(selected_current_name):
             name for name in associated_data['current_name'].unique().tolist()
             if pd.notnull(name) and name != "None"
         ]
+        
+        # Find the year when the institution was merged
+        merge_year = filtered_data[filtered_data['merged_into_id'].notna()]['year'].min()
+        
         if associated_names:
-            display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
+            display_elements.append(html.Span(f"Merged Into: ", style={'font-weight': 'bold'}))
             for i, name in enumerate(associated_names):
                 display_elements.append(
                     html.A(
@@ -289,6 +293,8 @@ def update_table(selected_current_name):
                 )
                 if i < len(associated_names) - 1:
                     display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
+                    
+            display_elements.append(html.Span(f" ({merge_year})", style={'font-weight': 'bold'}))
 
     if 'unit_id' in filtered_data.columns:
         current_unit_id = filtered_data['unit_id'].iloc[0]
@@ -297,9 +303,10 @@ def update_table(selected_current_name):
             if display_elements:
                 display_elements.append(html.Br())
                 display_elements.append(html.Br())
-            merged_from_info = merged_from_records[['unit_id', 'current_name']].drop_duplicates()
+            merged_from_info = merged_from_records[['unit_id', 'current_name', 'year']].drop_duplicates()
             for i, (idx, row) in enumerate(merged_from_info.iterrows()):
                 unit_id = row['unit_id']
+                absorption_year = row['year']
                 inst_names_data = new_data[new_data['unit_id'] == unit_id]
                 if not inst_names_data.empty and 'inst_name' in inst_names_data.columns:
                     inst_names = [
@@ -307,7 +314,7 @@ def update_table(selected_current_name):
                         if pd.notnull(name) and name != "None"
                     ]
                     if inst_names:
-                        display_elements.append(html.Span("Absorbed: ", style={'font-weight': 'bold'}))
+                        display_elements.append(html.Span(f"Absorbed: ", style={'font-weight': 'bold'}))
                         for j, name in enumerate(inst_names):
                             display_elements.append(
                                 html.A(
@@ -319,6 +326,9 @@ def update_table(selected_current_name):
                             )
                             if j < len(inst_names) - 1:
                                 display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
+                                
+                        display_elements.append(html.Span(f" ({absorption_year})", style={'font-weight': 'bold'}))
+                        
                 if i < len(merged_from_info) - 1:
                     display_elements.append(html.Br())
                     display_elements.append(html.Br())
