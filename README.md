@@ -3,8 +3,6 @@
 ![image](https://github.com/user-attachments/assets/99f6f4d9-b9e6-43ce-a79c-bd36a8864034)
 ![image](https://github.com/user-attachments/assets/452d1b59-5d5e-424c-9e5f-bd5c9c0aa6bc)
 
-# Carnegie Classifications Ancestry Grid
-
 A concise, interactive tool for exploring the historical lineage of U.S. higher education institutions using Carnegie Classification data from 1973–2021.
 
 ## Features
