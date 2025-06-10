@@ -92,17 +92,31 @@ desired_order = [
     'Not in'
 ]
 
+#this code is for alphabetically sorting the class_status values
+# def get_unique_labels_for_year_degree_label(year, degree_label):
+#     filtered_df = new_data[
+#         (new_data['year'] == year) &
+#         (new_data['degree_label'] == degree_label)
+#     ]
+#     unique_labels = filtered_df['class_status'].unique().tolist()
+#     unique_labels = sorted(
+#         unique_labels,
+#         key=lambda s: (s[0].lower(), len(s))
+#     )
+#     return unique_labels
+
+#this code is for sorting the class_status values by const_cat_value (NewLabels)
 def get_unique_labels_for_year_degree_label(year, degree_label):
     filtered_df = new_data[
         (new_data['year'] == year) &
         (new_data['degree_label'] == degree_label)
     ]
-    unique_labels = filtered_df['class_status'].unique().tolist()
-    unique_labels = sorted(
-        unique_labels,
-        key=lambda s: (s[0].lower(), len(s))
-    )
-    return unique_labels
+    # Drop duplicates to get unique (class_status, const_cat_value) pairs
+    unique_pairs = filtered_df[['class_status', 'const_cat_value']].drop_duplicates()
+    # Sort by const_cat_value
+    unique_pairs = unique_pairs.sort_values('const_cat_value')
+    # Return the class_status values in the sorted order
+    return unique_pairs['class_status'].tolist()
 
 # Callback to update table and merged-into display
 @app.callback(
