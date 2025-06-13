@@ -143,10 +143,32 @@ def update_table(selected_current_name):
         .to_dict()
     )
 
+    # Check for merged_into information
     merged_into_exists = (
         'merged_into_id' in filtered_data.columns and
         not filtered_data['merged_into_id'].isnull().all()
     )
+
+    # Create merged_into display if it exists
+    merged_into_display = ""
+    if merged_into_exists:
+        merged_into_info = filtered_data[filtered_data['merged_into_id'].notna()].iloc[0]
+        merged_into_id = merged_into_info['merged_into_id']
+        merged_into_year = merged_into_info.get('merge_year', 'N/A')
+        
+        # Find the merged_into institution name
+        merged_into_name = new_data[new_data['unit_id'] == merged_into_id]['current_name'].iloc[0] if not new_data[new_data['unit_id'] == merged_into_id].empty else 'Unknown Institution'
+        
+        merged_into_display = html.Div([
+            html.Span("Merged into: "),
+            html.A(
+                merged_into_name,
+                id={'type': 'merge-link', 'unit_id': merged_into_id, 'index': 0},
+                href='#',
+                style={'color': 'blue', 'textDecoration': 'underline'}
+            ),
+            html.Span(f" ({merged_into_year})")
+        ])
 
     # Calculate number of columns (degree label + years [+ merged_into])
     n_cols = 1 + len(years) + (1 if merged_into_exists else 0)
