@@ -86,24 +86,13 @@ desired_order = [
     "Master's",
     "Bachelor's",
     'Associates',
+    'Bacc/Assoc',
     'SF: 2Yr',
     'SF: 4Yr',
     'Tribal/Oth',
     'Not in'
 ]
 
-#this code is for alphabetically sorting the class_status values
-# def get_unique_labels_for_year_degree_label(year, degree_label):
-#     filtered_df = new_data[
-#         (new_data['year'] == year) &
-#         (new_data['degree_label'] == degree_label)
-#     ]
-#     unique_labels = filtered_df['class_status'].unique().tolist()
-#     unique_labels = sorted(
-#         unique_labels,
-#         key=lambda s: (s[0].lower(), len(s))
-#     )
-#     return unique_labels
 
 #this code is for sorting the class_status values by const_cat_value (NewLabels)
 def get_unique_labels_for_year_degree_label(year, degree_label):
@@ -111,6 +100,7 @@ def get_unique_labels_for_year_degree_label(year, degree_label):
         (new_data['year'] == year) &
         (new_data['degree_label'] == degree_label)
     ]
+
     # Drop duplicates to get unique (class_status, const_cat_value) pairs
     unique_pairs = filtered_df[['class_status', 'const_cat_value']].drop_duplicates()
     # Sort by const_cat_value
@@ -223,7 +213,7 @@ def update_table(selected_current_name):
                 (filtered_data['year'] == year) &
                 (filtered_data['degree_label'] == degree_label)
             ]['class_status'].unique().tolist()
-
+            
             if all_statuses:
                 status_elements = []
                 for status in all_statuses:
