@@ -4,8 +4,8 @@ from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
 # Load data for dropdown and grouping
-dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name'])
-dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name'])
+dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name', 'unit_id'])
+# dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name', 'unit_id'])
 
 # Build dropdown options: group by current_name, collect all unique past names
 dropdown_options = []
