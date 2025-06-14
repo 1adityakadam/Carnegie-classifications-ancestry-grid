@@ -4,35 +4,24 @@ from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
 # Load data for dropdown and grouping
-dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name', 'unit_id'])
-# dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name', 'unit_id'])
+dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name'])
+# dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name'])
 
 # Build dropdown options: group by current_name, collect all unique past names
 dropdown_options = []
-# for current_name, group in dropdown_df.groupby('current_name'):
-#     # Collect all unique, non-null, non-N/A past names for this current_name
-#     past_names = sorted(
-#         set(
-#             name for name in group['inst_name'].unique()
-#             if pd.notna(name) and name != "N/A" and name != current_name
-#         )
-#     )
-#     if past_names:
-#         label = f"{current_name} (Earlier: {', '.join(past_names)})"
-#     else:
-#         label = current_name
-#     dropdown_options.append({'label': label, 'value': current_name})
-
-# Revised grouping logic
-for (current_name, unit_id), group in dropdown_df.groupby(['current_name', 'unit_id']):
-    past_names = sorted(set(
-        name for name in group['inst_name'].unique() 
-        if pd.notna(name) and name != "N/A" and name != current_name
-    ))
-    
-    label = f"{current_name} (ID: {unit_id})" + (f" [Earlier: {', '.join(past_names)}]" if past_names else "")
-    dropdown_options.append({'label': label, 'value': unit_id})  # Use unit_id as the unique value
-
+for current_name, group in dropdown_df.groupby('current_name'):
+    # Collect all unique, non-null, non-N/A past names for this current_name
+    past_names = sorted(
+        set(
+            name for name in group['inst_name'].unique()
+            if pd.notna(name) and name != "N/A" and name != current_name
+        )
+    )
+    if past_names:
+        label = f"{current_name} (Earlier: {', '.join(past_names)})"
+    else:
+        label = current_name
+    dropdown_options.append({'label': label, 'value': current_name})
 
 # Sort by label
 dropdown_options = sorted(dropdown_options, key=lambda x: x['label'])
