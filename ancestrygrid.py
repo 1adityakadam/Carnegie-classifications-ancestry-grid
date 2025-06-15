@@ -4,31 +4,36 @@ from dash.dependencies import Input, Output, State, ALL
 import pandas as pd
 
 # Load data for dropdown and grouping
-dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name'])
-dropdown_df = dropdown_df.drop_duplicates(subset=['current_name', 'inst_name'])
+dropdown_df = pd.read_parquet('updated_data.parquet', columns=['current_name', 'inst_name', 'unit_id'])
+dropdown_df['display_current_name'] = dropdown_df['current_name'] + ' {' + dropdown_df['unit_id'].astype(str) + '}'
+dropdown_df['display_inst_name'] = dropdown_df['inst_name'] + ' {' + dropdown_df['unit_id'].astype(str) + '}'
 
-# Build dropdown options: group by current_name, collect all unique past names
+# Build dropdown options: group by current_name and unit_id, collect all unique past names
 dropdown_options = []
-for current_name, group in dropdown_df.groupby('current_name'):
-    # Collect all unique, non-null, non-N/A past names for this current_name
+for (current_name, unit_id), group in dropdown_df.groupby(['current_name', 'unit_id']):
+    # Collect all unique, non-null, non-N/A past names for this current_name/unit_id pair
     past_names = sorted(
         set(
             name for name in group['inst_name'].unique()
             if pd.notna(name) and name != "N/A" and name != current_name
         )
     )
+    
+    # Create display label with unit_id
     if past_names:
-        label = f"{current_name} (Earlier: {', '.join(past_names)})"
+        label = f"{current_name} {{{unit_id}}} (Earlier: {', '.join(past_names)})"
     else:
-        label = current_name
-    dropdown_options.append({'label': label, 'value': current_name})
+        label = f"{current_name} {{{unit_id}}}"
+    
+    # Use current_name|||unit_id as the value for internal lookup
+    dropdown_options.append({'label': label, 'value': f"{current_name}|||{unit_id}"})
 
 # Sort by label
 dropdown_options = sorted(dropdown_options, key=lambda x: x['label'])
 
 # Maintain original grouping logic with sorted current_names
-unique_names = [opt['value'] for opt in dropdown_options]
-name_to_group = {name: idx // 10 for idx, name in enumerate(unique_names)}
+unique_names = [opt['value'].split('|||')[0] for opt in dropdown_options]  # Extract current_name for grouping
+name_to_group = {name: idx // 10 for idx, name in enumerate(sorted(set(unique_names)))}
 
 # Load the main data
 new_data = pd.read_parquet('updated_data.parquet')
@@ -129,15 +134,24 @@ def update_table(selected_current_name):
     if not selected_current_name:
         return [], ""
 
-    group_id = name_to_group[selected_current_name]
+    # Parse the dropdown value to get current_name and unit_id
+    selected_name, selected_unit_id = selected_current_name.split('|||')
+    
+    group_id = name_to_group[selected_name]
     group_data = pd.read_parquet(
         f'updated_data_grouped/group_id={group_id}/'
     )
-    filtered_data = group_data[group_data['current_name'] == selected_current_name]
+    filtered_data = group_data[
+        (group_data['current_name'] == selected_name) & 
+        (group_data['unit_id'] == int(selected_unit_id))
+    ]
 
     years = sorted(new_data['year'].unique())
     inst_name_by_year = (
-        new_data[new_data['current_name'] == selected_current_name]
+        new_data[
+            (new_data['current_name'] == selected_name) & 
+            (new_data['unit_id'] == int(selected_unit_id))
+        ]
         .groupby('year')['inst_name']
         .first()
         .to_dict()
@@ -282,35 +296,50 @@ def update_table(selected_current_name):
             ))
         table_rows.append(html.Tr(cells))
 
-    # Merge/absorbed display logic
+    # Merged into and absorbed display logic - Inline format like reference
     display_elements = []
+    
+    # Check for merged_into information
     if 'merged_into_id' in filtered_data.columns and not filtered_data['merged_into_id'].isnull().all():
-        merged_into_value = filtered_data['merged_into_id'].dropna().unique()[0]
-        associated_data = new_data[new_data['unit_id'] == merged_into_value]
-        associated_names = [
-            name for name in associated_data['current_name'].unique().tolist()
-            if pd.notnull(name) and name != "None"
-        ]
+        # Filter out -1 values which represent closed/non-existent institutions
+        valid_merged_into = filtered_data['merged_into_id'].dropna()
+        valid_merged_into = valid_merged_into[valid_merged_into != -1]
         
-        # Find the year when the institution was merged
-        merge_year = filtered_data[filtered_data['merged_into_id'].notna()]['year'].min()
-        
-        if associated_names:
-            display_elements.append(html.Span(f"Merged Into: ", style={'font-weight': 'bold'}))
-            for i, name in enumerate(associated_names):
-                display_elements.append(
-                    html.A(
-                        f"{name}", href="#",
-                        id={'type': 'merge-link', 'unit_id': str(merged_into_value), 'index': i},
-                        **{'data-value': name},
-                        style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
-                    )
-                )
-                if i < len(associated_names) - 1:
-                    display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
+        if not valid_merged_into.empty:
+            merged_into_value = valid_merged_into.unique()[0]
+            associated_data = new_data[new_data['unit_id'] == merged_into_value]
+            associated_names = [
+                name for name in associated_data['current_name'].unique().tolist()
+                if pd.notnull(name) and name != "None"
+            ]
+            
+            # Find the year when the institution was merged
+            merge_year = filtered_data[
+                (filtered_data['merged_into_id'].notna()) & 
+                (filtered_data['merged_into_id'] != -1)
+            ]['year'].min()
+            
+            if associated_names:
+                display_elements.append(html.Span("Merged Into: ", style={'font-weight': 'bold'}))
+                for i, name in enumerate(associated_names):
+                    # Create proper dropdown value using current_name and unit_id from associated_data
+                    uid = associated_data[associated_data['current_name'] == name]['unit_id'].iloc[0]
+                    dropdown_value = f"{name}|||{uid}"
                     
-            display_elements.append(html.Span(f" ({merge_year})", style={'font-weight': 'bold'}))
-
+                    display_elements.append(
+                        html.A(
+                            name, href="#",
+                            id={'type': 'merge-link', 'unit_id': str(merged_into_value), 'index': i},
+                            **{'data-value': dropdown_value},
+                            style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
+                        )
+                    )
+                    if i < len(associated_names) - 1:
+                        display_elements.append(html.Span(", ", style={'font-weight': 'normal'}))
+                        
+                display_elements.append(html.Span(f" ({merge_year})", style={'font-weight': 'bold'}))
+    
+    # Check for absorbed institutions (merged_from)
     if 'unit_id' in filtered_data.columns:
         current_unit_id = filtered_data['unit_id'].iloc[0]
         merged_from_records = new_data[new_data['merged_into_id'] == current_unit_id]
@@ -329,13 +358,16 @@ def update_table(selected_current_name):
                         if pd.notnull(name) and name != "None"
                     ]
                     if inst_names:
-                        display_elements.append(html.Span(f"Absorbed: ", style={'font-weight': 'bold'}))
+                        display_elements.append(html.Span("Absorbed: ", style={'font-weight': 'bold'}))
+                        # Create proper dropdown value using current_name and unit_id
+                        dropdown_value = f"{row['current_name']}|||{unit_id}"
+                        
                         for j, name in enumerate(inst_names):
                             display_elements.append(
                                 html.A(
-                                    f"{name}", href="#",
+                                    name, href="#",
                                     id={'type': 'merged-from-link', 'unit_id': str(unit_id), 'index': j},
-                                    **{'data-value': row['current_name']},
+                                    **{'data-value': dropdown_value},
                                     style={'color': 'blue', 'font-weight': 'bold', 'cursor': 'pointer'}
                                 )
                             )
@@ -348,7 +380,10 @@ def update_table(selected_current_name):
                     display_elements.append(html.Br())
                     display_elements.append(html.Br())
 
-    return [table_header, inst_name_row] + table_rows, html.Div(display_elements)
+    # Combine all display elements
+    merge_display = html.Div(display_elements) if display_elements else html.Div()
+
+    return [table_header, inst_name_row] + table_rows, merge_display
 
 # Callback for dropdown link clicks
 @app.callback(
