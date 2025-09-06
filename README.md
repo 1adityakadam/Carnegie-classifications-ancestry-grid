@@ -1,56 +1,60 @@
-# Ancestry Grid for Carnegie Classification of Institutions of Higher Education
+## 📌 Project Overview  
+
+The **Ancestry Grid** is a concise, interactive tool for exploring the **historical lineage of U.S. higher education institutions** using **Carnegie Classification data** from **1973–2021**.  
+
+This project enables researchers, policymakers, and the public to trace institutional changes such as mergers, absorptions, classification shifts, and degree-granting status over time.  
 
 ![image](https://github.com/user-attachments/assets/99f6f4d9-b9e6-43ce-a79c-bd36a8864034)
 ![image](https://github.com/user-attachments/assets/452d1b59-5d5e-424c-9e5f-bd5c9c0aa6bc)
 
-A concise, interactive tool for exploring the historical lineage of U.S. higher education institutions using Carnegie Classification data from 1973–2021.
+## ✨ Key Features  
 
-## Features
+- **Dropdown Selection** – Choose institutions from an alphabetical, searchable dropdown  
+- **Historical Names** – View current, past, and future names for each institution  
+- **Timeline Visualization** – Interactive timeline showing institutional changes, mergers, absorptions, and degree status by year  
+- **Efficient Loading** – Data partitioned into 10 institution name chunks (~60,000 rows) for fast, responsive UI  
+- **Status Highlighting** – Degree-granting classification clearly marked for each year  
+- **Lineage Mapping** – Trace mergers, absorptions, and successor institutions with year-specific details  
 
-- **Dropdown Selection:** Choose institutions from an alphabetical, searchable dropdown.
-- **Historical Names:** View current, past, and future names for each institution.
-- **Timeline Visualization:** See institutional changes, mergers, absorptions, and degree status by year.
-- **Efficient Loading:** Data partitioned into 10 institute name chunks (~60,000 rows) for fast, responsive UI.
-- **Status Highlighting:** Degree-granting classification is clearly marked for each year.
-- **Lineage Mapping:** Trace mergers, absorptions, and successor institutions with year-specific details.
+---
 
-## Data Structure
+## 📊 Data Structure  
 
-Each partition contains:
-- Institution names (current and historical)
-- Carnegie classification by year
-- Merger/absorption events and years
-- Successor/predecessor links
-- Degree-granting status
+Each partition contains:  
+- Institution names (current and historical)  
+- Carnegie classification by year  
+- Merger/absorption events and years  
+- Successor/predecessor links  
+- Degree-granting status  
 
-## Usage
+---
 
-1. **Select** an institution from the dropdown or search box.
-2. **View** its timeline: name changes, classification shifts, and merger history.
-3. **Highlight** degree status and see transitions over the years.
-4. **Explore** related institutions via lineage links.
+## 🖥️ Usage  
 
-## Classification Categories
+1. Select an institution from the dropdown or search box  
+2. View its **timeline**: name changes, classification shifts, merger history  
+3. Highlight **degree status** across years  
+4. Explore **related institutions** via lineage links  
 
-- Doctoral Universities (R1, R2, R3)
-- Master’s Colleges & Universities
-- Baccalaureate Colleges
-- Associate’s Colleges
-- Special Focus Institutions
-- Tribal Colleges
+---
 
-## Performance
+## 🎓 Classification Categories  
 
-- **Partitioned loading** ensures only relevant data is fetched, improving speed.
-- **Incremental rendering** displays results as data loads.
+- **Doctoral Universities** (R1, R2, R3)  
+- **Master’s Colleges & Universities**  
+- **Baccalaureate Colleges**  
+- **Associate’s Colleges**  
+- **Special Focus Institutions**  
+- **Tribal Colleges**  
 
-## Contributing
+---
 
-Contributions are welcome! Please keep data partitioned and document all institutional relationship changes.
+## ⚡ Performance  
 
-## License
+- **Partitioned Loading** – Only relevant data is fetched → faster results  
+- **Incremental Rendering** – Displays results progressively as data loads  
 
-MIT License
+
 
 ---
 
