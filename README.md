@@ -1,6 +1,7 @@
 ## 📌 Project Overview  
 
-https://cchie-classification-history.onrender.com/
+https://carnegieclassifications.onrender.com/
+
 
 The **Ancestry Grid** is a concise, interactive tool for exploring the **historical lineage of U.S. higher education institutions** using **Carnegie Classification data** from **1973–2021**.  
 
