@@ -2,13 +2,15 @@
 
 https://carnegieclassifications.onrender.com/
 
-
 The **Ancestry Grid** is a concise, interactive tool for exploring the **historical lineage of U.S. higher education institutions** using **Carnegie Classification data** from **1973–2021**.  
 
 This project enables researchers, policymakers, and the public to trace institutional changes such as mergers, absorptions, classification shifts, and degree-granting status over time.  
 
 ![image](https://github.com/user-attachments/assets/99f6f4d9-b9e6-43ce-a79c-bd36a8864034)
 ![image](https://github.com/user-attachments/assets/452d1b59-5d5e-424c-9e5f-bd5c9c0aa6bc)
+<img width="1888" height="946" alt="image" src="https://github.com/user-attachments/assets/f5d13940-e842-4628-a643-03361ba53516" />
+<img width="1888" height="929" alt="image" src="https://github.com/user-attachments/assets/1a4df6ec-8330-447b-bcd0-6c31b35f72f8" />
+
 
 ## ✨ Key Features  
 
