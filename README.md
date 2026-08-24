@@ -1,6 +1,6 @@
 ## 📌 Project Overview  
 
-Live @ https://carnegieclassifications.onrender.com/
+Live @ https://vborden.pages.iu.edu/CCIHE/
 
 The **Ancestry Grid** is a concise, interactive tool for exploring the **historical lineage of U.S. higher education institutions** using **Carnegie Classification data** from **1973–2021**.  
 
